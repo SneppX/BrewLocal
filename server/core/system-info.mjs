@@ -1,9 +1,14 @@
 import os from "node:os";
+import { getPlatformAdapter } from "../platform/registry.mjs";
 
 export function getSystemInfo() {
+  const platformAdapter = getPlatformAdapter();
   return {
     platform: process.platform,
-    platformName: process.platform === "win32" ? "Windows" : process.platform === "darwin" ? "macOS" : process.platform === "linux" ? "Linux" : "Unsupported",
+    platformId: platformAdapter.id,
+    platformName: platformAdapter.name,
+    platformSupported: platformAdapter.supported,
+    nativeDesktopControl: "not_implemented",
     architecture: process.arch,
     operatingSystemRelease: os.release(),
     nodeVersion: process.versions.node,
