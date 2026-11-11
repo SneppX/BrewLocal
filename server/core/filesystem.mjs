@@ -85,7 +85,7 @@ export async function resolveWritableTarget(input) {
 
 export async function writeTextFile(input, content, { overwrite = false, maxBytes = 262_144 } = {}) {
   if (typeof content !== "string") throw new TypeError("File content must be a UTF-8 string.");
-  if (content.includes("\\0")) throw new TypeError("NUL bytes are not supported in text files.");
+  if (content.includes("\0")) throw new TypeError("NUL bytes are not supported in text files.");
   if (!Number.isInteger(maxBytes) || maxBytes < 1 || maxBytes > 262_144) {
     throw new RangeError("maxBytes must be between 1 and 262144.");
   }
