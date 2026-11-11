@@ -24,7 +24,7 @@ function makeEntryHarness() {
 
 test("stores and retrieves Ed25519 private keys through the injected native provider", async () => {
   const { FakeEntry, records } = makeEntryHarness();
-  const store = await createDeviceKeyStore({ deviceId: "device-01", platform: "win32", EntryClass: FakeEntry });
+  const store = await createDeviceKeyStore({ accountId: "account-01", deviceId: "device-01", platform: "win32", EntryClass: FakeEntry });
   const privateKeyPem = makeIdentity();
   await store.storePrivateKey(privateKeyPem);
   assert.equal(await store.loadPrivateKey(), privateKeyPem);
@@ -42,7 +42,7 @@ test("requires the Linux Secret Service backend explicitly", async () => {
       capturedOptions = options;
     }
   }
-  await createDeviceKeyStore({ deviceId: "device-02", platform: "linux", EntryClass: InspectingEntry });
+  await createDeviceKeyStore({ accountId: "account-01", deviceId: "device-02", platform: "linux", EntryClass: InspectingEntry });
   assert.deepEqual(capturedOptions, { linux: { store: "secret-service" } });
 });
 
@@ -52,7 +52,7 @@ test("rejects unsupported operating systems without creating a provider", async 
     constructor() { constructed = true; }
   }
   await assert.rejects(
-    createDeviceKeyStore({ deviceId: "device-03", platform: "plan9", EntryClass: ForbiddenEntry }),
+    createDeviceKeyStore({ accountId: "account-01", deviceId: "device-03", platform: "plan9", EntryClass: ForbiddenEntry }),
     /unavailable on this operating system/,
   );
   assert.equal(constructed, false);
@@ -64,7 +64,7 @@ test("rejects malformed identifiers and non-Ed25519 keys", async () => {
     createDeviceKeyStore({ deviceId: "device" + String.fromCharCode(10) + "malicious", platform: "win32", EntryClass: FakeEntry }),
     /safe identifier/,
   );
-  const store = await createDeviceKeyStore({ deviceId: "device-04", platform: "darwin", EntryClass: FakeEntry });
+  const store = await createDeviceKeyStore({ accountId: "account-01", deviceId: "device-04", platform: "darwin", EntryClass: FakeEntry });
   await assert.rejects(store.storePrivateKey("not a private key"), /Invalid PEM|DECODER|private key/i);
   const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   await assert.rejects(
@@ -76,10 +76,20 @@ test("rejects malformed identifiers and non-Ed25519 keys", async () => {
 test("fails closed when the native keyring provider is unavailable", async () => {
   await assert.rejects(
     createDeviceKeyStore({
-      deviceId: "device-05",
+      accountId: "account-01", deviceId: "device-05",
       platform: "linux",
       EntryClass: class { constructor() { throw new Error("no keyring"); } },
     }),
     /No plaintext fallback/,
   );
+});
+
+
+test("isolates credentials for the same device ID across different accounts", async () => {
+  const { FakeEntry, records } = makeEntryHarness();
+  const first = await createDeviceKeyStore({ accountId: "account-01", deviceId: "shared-device", platform: "win32", EntryClass: FakeEntry });
+  const second = await createDeviceKeyStore({ accountId: "account-02", deviceId: "shared-device", platform: "win32", EntryClass: FakeEntry });
+  await first.storePrivateKey(makeIdentity());
+  assert.equal(await second.loadPrivateKey(), null);
+  assert.equal(records.size, 1);
 });
