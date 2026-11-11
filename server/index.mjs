@@ -369,7 +369,7 @@ process.stdin.on("data",chunk=>{
     else if(msg.method==="tools/call"){
       const name=msg.params?.name, args=msg.params?.arguments||{};
       runTool(name,args).then(result=>{
-        if(result?.content) reply(msg.id,{content:result.content});
+        if(Array.isArray(result?.content)) reply(msg.id,{content:result.content});
         else reply(msg.id,{content:[{type:"text",text:JSON.stringify(result)}]});
       }).catch(e=>reply(msg.id,{content:[{type:"text",text:e.message}],isError:true}));
     } else if(msg.id!==undefined) error(msg.id,-32601,"Method not found");
