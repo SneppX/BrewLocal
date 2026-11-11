@@ -1,60 +1,56 @@
-# BrewLocal
+# BrewPilot Local
 
-BrewLocal is the public source repository for BrewPilot's local MCP plugin. The installed private ChatGPT plugin remains a separate release artifact; changes in this repository are not automatically installed into that plugin.
+BrewPilot Local is a cross-platform stdio MCP server for local browser automation and permission-gated computer operations.
 
-## Product boundaries
+## Implemented
 
-- **BrewLocal** — local MCP server, browser automation, local permissions and local capability adapters.
-- **BrewPilot cloud** — separate cloud MCP project and future device relay.
-- **BrewSite** — separate product website.
+- Browser automation for supported Chromium-based browsers.
+- Isolated persistent browser profiles.
+- Deny-by-default local permission policies.
+- Exact one-time approvals bound to the operation, resource, and SHA-256 argument digest.
+- Exact-resource session grants and explicit persistent policies.
+- Fresh one-time confirmation for external and destructive operations, even when a persistent allow rule exists.
+- Basic system information without usernames, hostnames, environment variables, file contents, or process lists.
+- Shallow local directory listing and bounded UTF-8 file reads.
+- Bounded UTF-8 file creation and overwrite with atomic replacement.
+- Regular-file deletion with fresh confirmation.
+- Symbolic-link rejection for file writes and deletion.
+- Redacted in-memory audit events, including hashed absolute local paths.
+- Signed Ed25519 request verification, canonical JSON, expiry checks, and in-memory replay protection.
+- Windows, macOS, and Linux platform registry.
 
-The local runtime does not open an inbound network listener and does not include a cloud relay.
+## Local file permissions
 
-## Current local plugin baseline
+File operations are scoped to exact canonical paths:
 
-The imported plugin release is **0.2.1**. It includes:
-- Isolated Chromium-based browser automation.
-- Local permission policies: `deny`, `ask`, `session`, `always`.
-- Deny-by-default behavior for unmatched capabilities.
-- Exact one-time and session grants.
-- Basic system information.
-- In-memory redacted audit events.
+- `files/list` — shallow directory metadata only.
+- `files/read` — bounded UTF-8 text reads.
+- `files/write` — create a new text file. Overwriting an existing file is classified as destructive.
+- `files/delete` — always classified as destructive.
 
-## Repository development additions
+Unmatched operations are denied. External and destructive operations require a fresh exact one-time approval. Persistent policies cannot bypass those checks. Privileged operations remain blocked until a separate operating-system authorization adapter exists.
 
-The repository now also contains unreleased development work:
-- One-time approvals bound to a random request ID, exact argument digest and 60-second expiry.
-- Canonical JSON hashing shared with the cloud bridge protocol.
-- Signed Ed25519 request verification, expiry checks and replay protection.
-- A transport-neutral local bridge dispatcher that independently enforces local policy.
-- Windows, macOS and Linux platform registry.
-- Permission-gated, non-recursive directory listing and bounded UTF-8 text-file reads.
-- Absolute local paths are hashed in audit events.
-- Cross-platform CI and security workflows.
+## Cloud bridge status
 
-These repository additions are not yet part of the installed private plugin release. They must pass CI and be reviewed before a new plugin package is published.
+The repository includes signed request verification and a transport-neutral dispatcher. It does **not** yet include device pairing, durable nonce storage, the authenticated outbound relay, a cloud request queue, or an end-to-end deployed cloud service. Do not describe this repository as connected to ChatGPT or as a remote-control agent until those components are implemented and verified.
 
-## Development
+## Runtime
 
-Requirements: Node.js 22 or later.
+Requires Node.js 22 or newer. The MCP server runs locally over stdio using `node server/index.mjs`.
+
+## Development checks
 
 ```bash
+npm install
 npm run check
-npm test
 ```
 
-The project currently uses Node.js built-in modules and the built-in test runner. No dependency installation is needed.
+CI tests Node.js 22 and 24 on Windows, macOS, and Linux.
 
-## Permission model
+## Security boundaries
 
-Unmatched capabilities are denied. Before using the new file tools, configure narrow rules for the exact canonical directory or file path. Do not create broad `always` rules unless you deliberately intend to grant persistent access.
-
-Destructive and privileged operations remain outside the current implementation and must require fresh confirmation in future adapters.
-
-## Platform status
-
-See [platform support](docs/platform-support.md), [architecture](docs/architecture.md), and [security model](docs/security-model.md).
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
+- Cloud signatures prove request integrity; they do not grant local permission.
+- The local permission manager is authoritative.
+- Destructive and external actions require fresh confirmation.
+- Raw file contents, secrets, and command output are not written to the audit log.
+- No public inbound listener is provided.
