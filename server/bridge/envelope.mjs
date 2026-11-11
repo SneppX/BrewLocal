@@ -1,4 +1,4 @@
-import { verify } from "node:crypto";
+import { createHash, verify } from "node:crypto";
 import { canonicalJson } from "../core/canonical-json.mjs";
 
 const RISK_LEVELS = new Set(["read", "write", "external", "destructive", "privileged"]);
@@ -23,10 +23,8 @@ function validEnvelope(input) {
 }
 
 export function sha256Canonical(value) {
-  const { createHash } = awaitImportCrypto;
   return createHash("sha256").update(canonicalJson(value), "utf8").digest("hex");
 }
-const awaitImportCrypto = await import("node:crypto");
 
 export async function verifySignedRequest(input, servicePublicKey, options) {
   if (!validEnvelope(input)) return { ok: false, reason: "invalid_envelope" };
