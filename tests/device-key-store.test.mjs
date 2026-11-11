@@ -61,7 +61,7 @@ test("rejects unsupported operating systems without creating a provider", async 
 test("rejects malformed identifiers and non-Ed25519 keys", async () => {
   const { FakeEntry } = makeEntryHarness();
   await assert.rejects(
-    createDeviceKeyStore({ deviceId: "device" + String.fromCharCode(10) + "malicious", platform: "win32", EntryClass: FakeEntry }),
+    createDeviceKeyStore({ accountId: "account-01", deviceId: "device" + String.fromCharCode(10) + "malicious", platform: "win32", EntryClass: FakeEntry }),
     /safe identifier/,
   );
   const store = await createDeviceKeyStore({ accountId: "account-01", deviceId: "device-04", platform: "darwin", EntryClass: FakeEntry });
