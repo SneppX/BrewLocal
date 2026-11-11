@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -62,6 +62,63 @@ test("MCP server exposes permission tools and gates system information", async (
     const info = JSON.parse(allowed.content[0].text);
     assert.ok(info.platformName);
     assert.ok(info.memory.totalBytes > 0);
+  } finally {
+    server.close();
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
+
+async function callTool(server, name, args = {}) {
+  const response = await server.call("tools/call", { name, arguments: args });
+  return JSON.parse(response.content[0].text);
+}
+
+async function approveExact(server, result) {
+  assert.equal(result.status, "approval_required");
+  await callTool(server, "permissions_approve_once", {
+    ...result.permission,
+    requestId: result.approval.requestId,
+    argumentDigest: result.approval.argumentDigest,
+  });
+}
+
+test("MCP server exposes scoped file tools and enforces one-time destructive approval", async () => {
+  const home = await mkdtemp(path.join(os.tmpdir(), "brewpilot-files-mcp-"));
+  const server = startServer(home);
+  try {
+    await server.call("initialize", { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "test", version: "1" } });
+    const listed = await server.call("tools/list");
+    const names = listed.tools.map((tool) => tool.name);
+    for (const name of ["files_list", "files_read", "files_write", "files_delete"]) assert.ok(names.includes(name));
+
+    const directory = path.join(home, "workspace");
+    await mkdir(directory);
+    const filePath = path.join(directory, "notes.txt");
+
+    await callTool(server, "permissions_set", { capability: "files", operation: "list", resource: directory, mode: "always" });
+    const listing = await callTool(server, "files_list", { directory });
+    assert.equal(listing.totalEntries, 0);
+
+    await callTool(server, "permissions_set", { capability: "files", operation: "write", resource: filePath, mode: "always" });
+    const created = await callTool(server, "files_write", { filePath, content: "first version" });
+    assert.equal(created.created, true);
+
+    const overwriteArgs = { filePath, content: "second version", overwrite: true };
+    const overwriteApproval = await callTool(server, "files_write", overwriteArgs);
+    await approveExact(server, overwriteApproval);
+    const overwritten = await callTool(server, "files_write", overwriteArgs);
+    assert.equal(overwritten.overwritten, true);
+
+    await callTool(server, "permissions_set", { capability: "files", operation: "read", resource: filePath, mode: "always" });
+    const read = await callTool(server, "files_read", { filePath });
+    assert.equal(read.content, "second version");
+
+    await callTool(server, "permissions_set", { capability: "files", operation: "delete", resource: filePath, mode: "always" });
+    const deleteApproval = await callTool(server, "files_delete", { filePath });
+    await approveExact(server, deleteApproval);
+    const deleted = await callTool(server, "files_delete", { filePath });
+    assert.equal(deleted.deleted, true);
   } finally {
     server.close();
     await rm(home, { recursive: true, force: true });
