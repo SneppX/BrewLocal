@@ -6,7 +6,8 @@ This module is a transport-neutral receiver and dispatcher for signed requests f
 
 - Account-scoped Ed25519 device identity generation and challenge signing.
 - Private-key persistence through native OS credential stores: Windows Credential Manager, macOS Keychain, and Linux Secret Service only. No plaintext fallback is allowed.
-
+- HTTPS-only cloud pairing initiation through `device-pairing-client.mjs`; loopback HTTP is allowed only for local development.
+- Pairing initiation sends the device ID and public key only. The private key remains in the OS credential store.
 - Ed25519 signature verification over canonical JSON.
 - Exact envelope schema and argument-digest validation.
 - 60-second maximum request lifetime and bounded clock skew.
@@ -16,15 +17,16 @@ This module is a transport-neutral receiver and dispatcher for signed requests f
 - Fresh local confirmation for external, destructive and privileged risk classes.
 - Bounded adapter result serialization and redacted audit metadata.
 
-## Not implemented
+## Not yet implemented
 
-- No outbound WebSocket, SSE, polling or Sites-specific transport.
-- No device pairing or account enrollment.
-- No persistent nonce database.
-- No native desktop-control, process-management or terminal-execution adapter.
+- User-authorized pairing completion flow from the assistant-facing MCP tool into a fully connected local enrollment state.
+- Authenticated outbound WebSocket, SSE or polling session.
+- Sites-specific transport integration.
+- Persistent nonce database.
+- Native desktop-control, process-management or terminal-execution adapter.
 - The bridge dispatcher is not yet wired into the stdio MCP process.
 
-Do not expose this module through an unauthenticated local HTTP listener. The eventual transport must be initiated by the local agent and must deliver only signed, short-lived requests to this dispatcher.
+The pairing client starts enrollment and returns a short-lived code for the user to complete in the cloud account. It does not establish a remote-control session. Do not expose this module through an unauthenticated local HTTP listener. The eventual transport must be initiated by the local agent and must deliver only signed, short-lived requests to this dispatcher.
 
 ## Request contract
 
