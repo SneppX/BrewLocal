@@ -9,7 +9,7 @@ import { PermissionManager, RiskLevel } from "./core/permissions.mjs";
 import { PolicyStore } from "./core/policy-store.mjs";
 import { AuditLog } from "./core/audit.mjs";
 import { getSystemInfo } from "./core/system-info.mjs";
-import { resolveDirectory, resolveTextFile, listDirectory, readTextFile } from "./core/filesystem.mjs";
+import { resolveDirectory, resolveTextFile, listDirectory, readTextFile, resolveWritableTarget, writeTextFile, deleteFile } from "./core/filesystem.mjs";
 
 const SERVER_NAME = "brewpilot-local";
 const VERSION = "0.2.1";
@@ -177,6 +177,8 @@ const tools = [
  {name:"system_info",description:"Read basic operating-system and hardware information. Does not return usernames, hostnames, environment variables, files, or process lists. Requires the system/info/system permission.",inputSchema:{type:"object",properties:{},additionalProperties:false}},
  {name:"files_list",description:"List metadata for entries in one exact local directory. No recursive traversal. Requires a matching files/list/path permission; unmatched paths are denied.",inputSchema:{type:"object",properties:{directory:{type:"string",minLength:1,maxLength:4096},maxEntries:{type:"integer",minimum:1,maximum:200}},required:["directory"],additionalProperties:false}},
  {name:"files_read",description:"Read one bounded UTF-8 text file from an exact local path. Binary files and files above the configured limit are rejected. Requires a matching files/read/path permission.",inputSchema:{type:"object",properties:{filePath:{type:"string",minLength:1,maxLength:4096},maxBytes:{type:"integer",minimum:1024,maximum:262144}},required:["filePath"],additionalProperties:false}},
+ {name:"files_write",description:"Create or update one bounded UTF-8 text file at an exact local path. New files require files/write/path permission. Replacing an existing file always requires fresh confirmation, even with a persistent policy.",inputSchema:{type:"object",properties:{filePath:{type:"string",minLength:1,maxLength:4096},content:{type:"string",maxLength:262144},overwrite:{type:"boolean"}},required:["filePath","content"],additionalProperties:false}},
+ {name:"files_delete",description:"Delete one regular local file at an exact path. Deletion always requires fresh confirmation, even with a persistent policy.",inputSchema:{type:"object",properties:{filePath:{type:"string",minLength:1,maxLength:4096}},required:["filePath"],additionalProperties:false}},
  {name:"browser_launch",description:"Launch an isolated local Chromium-based browser. Requires browser/launch/local-browser permission.",inputSchema:{type:"object",properties:{browser:{type:"string",description:"auto, chrome, edge, brave, vivaldi, opera, chromium, or custom"},executablePath:{type:"string"},headless:{type:"boolean"}},additionalProperties:false}},
  {name:"browser_navigate",description:"Navigate the active tab to an HTTP(S) URL. Permission is scoped to the destination hostname.",inputSchema:{type:"object",properties:{url:{type:"string"}},required:["url"],additionalProperties:false}},
  {name:"browser_inspect",description:"Inspect the current page title, URL, visible text, and interactive elements.",inputSchema:{type:"object",properties:{maxTextChars:{type:"integer",minimum:500,maximum:20000}},additionalProperties:false}},
@@ -256,6 +258,17 @@ async function runTool(name,a) {
   if (name === "files_read") {
     const filePath = await resolveTextFile(a.filePath, { maxBytes: a.maxBytes });
     return authorize({ capability: "files", operation: "read", resource: filePath, risk: RiskLevel.READ }, async () => readTextFile(filePath, { maxBytes: a.maxBytes }), a);
+  }
+  if (name === "files_write") {
+    const target = await resolveWritableTarget(a.filePath);
+    if (target.exists && a.overwrite !== true) throw new Error("The target file already exists. Set overwrite=true only after explicit approval.");
+    const risk = target.exists ? RiskLevel.DESTRUCTIVE : RiskLevel.WRITE;
+    return authorize({ capability: "files", operation: "write", resource: target.path, risk }, async () => writeTextFile(target.path, a.content, { overwrite: a.overwrite === true }), a);
+  }
+  if (name === "files_delete") {
+    const target = await resolveWritableTarget(a.filePath);
+    if (!target.exists) throw new Error("The requested file does not exist.");
+    return authorize({ capability: "files", operation: "delete", resource: target.path, risk: RiskLevel.DESTRUCTIVE }, async () => deleteFile(target.path), a);
   }
   if (name === "browser_stop") {
     if(cdp){try{cdp.close()}catch{} cdp=null;}
