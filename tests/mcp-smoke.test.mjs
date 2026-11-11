@@ -4,10 +4,11 @@ import { spawn } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import readline from "node:readline";
 
 function startServer(home) {
-  const child = spawn(process.execPath, [new URL("../server/index.mjs", import.meta.url).pathname], {
+  const child = spawn(process.execPath, [fileURLToPath(new URL("../server/index.mjs", import.meta.url))], {
     env: { ...process.env, HOME: home, USERPROFILE: home },
     stdio: ["pipe", "pipe", "pipe"],
   });
@@ -46,7 +47,7 @@ test("MCP server exposes permission tools and gates system information", async (
   const server = startServer(home);
   try {
     const initialized = await server.call("initialize", { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "test", version: "1" } });
-    assert.equal(initialized.serverInfo.version, "0.2.0");
+    assert.equal(initialized.serverInfo.version, "0.2.1");
     const listed = await server.call("tools/list");
     const names = listed.tools.map((tool) => tool.name);
     assert.ok(names.includes("permissions_approve_once"));
@@ -54,7 +55,9 @@ test("MCP server exposes permission tools and gates system information", async (
     const denied = await server.call("tools/call", { name: "system_info", arguments: {} });
     const deniedPayload = JSON.parse(denied.content[0].text);
     assert.equal(deniedPayload.status, "approval_required");
-    await server.call("tools/call", { name: "permissions_approve_once", arguments: { capability: "system", operation: "info", resource: "system" } });
+    assert.ok(deniedPayload.approval.requestId);
+    assert.match(deniedPayload.approval.argumentDigest, /^[a-f0-9]{64}$/);
+    await server.call("tools/call", { name: "permissions_approve_once", arguments: { ...deniedPayload.permission, ...deniedPayload.approval } });
     const allowed = await server.call("tools/call", { name: "system_info", arguments: {} });
     const info = JSON.parse(allowed.content[0].text);
     assert.ok(info.platformName);

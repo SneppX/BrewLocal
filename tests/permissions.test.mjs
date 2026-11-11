@@ -11,7 +11,8 @@ test("deny by default when no matching policy exists", () => {
 test("ask policy blocks until an exact one-time approval is consumed", () => {
   const manager = new PermissionManager([{ capability: "browser", operation: "*", resource: "*", mode: "ask" }]);
   assert.equal(manager.evaluate(request).decision, "ask");
-  manager.grantOnce(request);
+  const approval = manager.createApprovalRequest(request, "a".repeat(64));
+  manager.grantOnce(request, approval);
   assert.equal(manager.evaluate(request).decision, "allow");
   assert.equal(manager.evaluate(request).decision, "ask");
 });
@@ -40,4 +41,24 @@ test("destructive and privileged actions always require fresh approval", () => {
 test("wildcard one-time approvals are rejected", () => {
   const manager = new PermissionManager([{ capability: "browser", operation: "*", resource: "*", mode: "ask" }]);
   assert.throws(() => manager.grantOnce({ capability: "browser", operation: "*", resource: "*" }));
+});
+
+test("one-time approval is bound to the exact action argument digest", () => {
+  const manager = new PermissionManager([{ capability: "browser", operation: "type", resource: "example.com", mode: "ask" }]);
+  const approval = manager.createApprovalRequest({ capability: "browser", operation: "type", resource: "example.com" }, "a".repeat(64));
+  manager.grantOnce({ capability: "browser", operation: "type", resource: "example.com" }, approval);
+  assert.equal(manager.evaluate({ capability: "browser", operation: "type", resource: "example.com", argumentDigest: "b".repeat(64) }).decision, "ask");
+  assert.equal(manager.evaluate({ capability: "browser", operation: "type", resource: "example.com", argumentDigest: "a".repeat(64) }).decision, "allow");
+});
+
+test("one-time approval cannot be granted with a mismatched request tuple", () => {
+  const manager = new PermissionManager([{ capability: "browser", operation: "click", resource: "example.com", mode: "ask" }]);
+  const approval = manager.createApprovalRequest({ capability: "browser", operation: "click", resource: "example.com" }, "c".repeat(64));
+  assert.throws(() => manager.grantOnce({ capability: "browser", operation: "navigate", resource: "example.com" }, approval), /do not match/);
+});
+
+test("one-time approval requests expire", () => {
+  const manager = new PermissionManager([{ capability: "browser", operation: "click", resource: "example.com", mode: "ask" }]);
+  const approval = manager.createApprovalRequest({ capability: "browser", operation: "click", resource: "example.com" }, "d".repeat(64), 1000);
+  assert.throws(() => manager.grantOnce({ capability: "browser", operation: "click", resource: "example.com" }, { ...approval, now: 62001 }), /expired/);
 });

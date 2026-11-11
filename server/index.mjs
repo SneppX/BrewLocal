@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -9,7 +10,7 @@ import { AuditLog } from "./core/audit.mjs";
 import { getSystemInfo } from "./core/system-info.mjs";
 
 const SERVER_NAME = "brewpilot-local";
-const VERSION = "0.2.0";
+const VERSION = "0.2.1";
 const policyStore = new PolicyStore();
 const permissionManager = new PermissionManager();
 const auditLog = new AuditLog();
@@ -186,17 +187,22 @@ const tools = [
  {name:"browser_stop",description:"Close the BrewPilot browser session. This emergency cleanup action is always available.",inputSchema:{type:"object",properties:{},additionalProperties:false}}
 ];
 
-async function authorize(request, action) {
+async function authorize(request, action, actionArgs = {}) {
   await permissionReady;
-  const decision = permissionManager.evaluate(request);
+  const argumentDigest = createHash("sha256").update(JSON.stringify(actionArgs)).digest("hex");
+  const decision = permissionManager.evaluate({ ...request, argumentDigest });
   auditLog.record({ action: "permission_check", ...request, decision: decision.decision, metadata: { reason: decision.reason } });
   if (decision.decision !== "allow") {
+    const approval = decision.decision === "ask"
+      ? permissionManager.createApprovalRequest(request, argumentDigest)
+      : null;
     return {
       status: decision.decision === "ask" ? "approval_required" : "permission_denied",
       permission: { capability: request.capability, operation: request.operation, resource: request.resource, risk: request.risk },
+      ...(approval ? { approval } : {}),
       reason: decision.reason,
       nextStep: decision.decision === "ask"
-        ? "Ask the user for explicit approval. After approval, call permissions_approve_once with this exact capability, operation and resource, then retry the action."
+        ? "Ask the user for explicit approval. After approval, call permissions_approve_once with the exact requestId, argumentDigest and permission tuple returned here, then retry the identical action arguments within 60 seconds."
         : "The user can explicitly configure a matching rule with permissions_set. No action was executed."
     };
   }
@@ -214,7 +220,7 @@ async function runTool(name,a) {
   }
   if (name === "permissions_approve_once") {
     const request = { capability: a.capability, operation: a.operation, resource: a.resource };
-    permissionManager.grantOnce(request);
+    permissionManager.grantOnce(request, { requestId: a.requestId, argumentDigest: a.argumentDigest });
     auditLog.record({ action: "one_time_approval_granted", ...request, decision: "approved" });
     return { status: "approved_once", request, note: "The next matching operation can run once. The approval is not persistent." };
   }
@@ -237,7 +243,7 @@ async function runTool(name,a) {
   }
   if (name === "audit_list") return { events: auditLog.list(a.limit ?? 100), persistence: "current process session only" };
   if (name === "system_info") {
-    return authorize({ capability: "system", operation: "info", resource: "system", risk: RiskLevel.READ }, async () => getSystemInfo());
+    return authorize({ capability: "system", operation: "info", resource: "system", risk: RiskLevel.READ }, async () => getSystemInfo(), a);
   }
   if (name === "browser_stop") {
     if(cdp){try{cdp.close()}catch{} cdp=null;}
@@ -247,7 +253,7 @@ async function runTool(name,a) {
     return {status:"stopped"};
   }
   if (name === "browser_launch") {
-    return authorize({ capability: "browser", operation: "launch", resource: "local-browser", risk: RiskLevel.WRITE }, () => launchBrowser(a));
+    return authorize({ capability: "browser", operation: "launch", resource: "local-browser", risk: RiskLevel.WRITE }, () => launchBrowser(a), a);
   }
   if (name === "browser_navigate") {
     let url;
@@ -259,7 +265,7 @@ async function runTool(name,a) {
       await new Promise(r=>setTimeout(r,700));
       activeResource = url.hostname.toLowerCase();
       return {url:await evaluate("location.href"),title:await evaluate("document.title")};
-    });
+    }, a);
   }
   const browserOperations = {
     browser_inspect: ["inspect", RiskLevel.READ],
@@ -318,7 +324,7 @@ async function runTool(name,a) {
       throw new Error("Timed out waiting for selector.");
     }
     throw new Error("Unknown tool: "+name);
-  });
+  }, a);
 }
 
 process.stdin.setEncoding("utf8");

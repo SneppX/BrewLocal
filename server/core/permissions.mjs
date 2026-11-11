@@ -60,7 +60,8 @@ export function findMatchingPolicy(policies, request) {
 export class PermissionManager {
   #policies = [];
   #sessionGrants = new Set();
-  #oneTimeGrants = new Set();
+  #oneTimeGrants = new Map();
+  #pendingApprovals = new Map();
 
   constructor(policies = []) { this.replacePolicies(policies); }
 
@@ -69,6 +70,7 @@ export class PermissionManager {
     this.#policies = policies.map(validatePolicy);
     this.#sessionGrants.clear();
     this.#oneTimeGrants.clear();
+    this.#pendingApprovals.clear();
   }
 
   listPolicies() { return this.#policies.map((policy) => ({ ...policy })); }
@@ -86,12 +88,42 @@ export class PermissionManager {
     return normalized;
   }
 
-  grantOnce(request) {
+  createApprovalRequest(request, argumentDigest, now = Date.now()) {
     const normalized = makePermissionRequest(request);
     if (normalized.capability === "*" || normalized.operation === "*" || normalized.resource === "*") {
       throw new TypeError("One-time approvals must target an exact capability, operation and resource.");
     }
-    this.#oneTimeGrants.add(this.#key(normalized));
+    if (typeof argumentDigest !== "string" || !/^[a-f0-9]{64}$/.test(argumentDigest)) {
+      throw new TypeError("An SHA-256 action argument digest is required.");
+    }
+    for (const [id, pending] of this.#pendingApprovals) {
+      if (pending.expiresAt <= now) this.#pendingApprovals.delete(id);
+    }
+    if (this.#pendingApprovals.size >= 256) throw new Error("Too many pending approval requests.");
+    const requestId = randomUUID();
+    this.#pendingApprovals.set(requestId, {
+      key: this.#key(normalized),
+      argumentDigest,
+      expiresAt: now + 60_000,
+    });
+    return { requestId, argumentDigest, expiresInMs: 60_000 };
+  }
+
+  grantOnce(request, { requestId, argumentDigest, now = Date.now() } = {}) {
+    const normalized = makePermissionRequest(request);
+    const pending = this.#pendingApprovals.get(requestId);
+    if (!pending || pending.expiresAt <= now) {
+      this.#pendingApprovals.delete(requestId);
+      throw new Error("Approval request is missing or expired. Request fresh approval.");
+    }
+    if (pending.key !== this.#key(normalized) || pending.argumentDigest !== argumentDigest) {
+      throw new Error("Approval details do not match the pending action.");
+    }
+    this.#pendingApprovals.delete(requestId);
+    this.#oneTimeGrants.set(this.#key(normalized), {
+      argumentDigest,
+      expiresAt: now + 60_000,
+    });
   }
 
   grantForSession(request) {
@@ -118,7 +150,12 @@ export class PermissionManager {
     }
     const key = this.#key(request);
     if (policy.mode === PermissionMode.ASK) {
-      if (this.#oneTimeGrants.delete(key)) return { decision: "allow", reason: "One-time approval consumed." };
+      const grant = this.#oneTimeGrants.get(key);
+      if (grant && grant.expiresAt > Date.now() && grant.argumentDigest === input.argumentDigest) {
+        this.#oneTimeGrants.delete(key);
+        return { decision: "allow", reason: "One-time approval consumed." };
+      }
+      if (grant && grant.expiresAt <= Date.now()) this.#oneTimeGrants.delete(key);
       return { decision: "ask", reason: "This operation requires fresh user approval." };
     }
     if (policy.mode === PermissionMode.SESSION) {
