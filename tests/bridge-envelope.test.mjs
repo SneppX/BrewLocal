@@ -66,3 +66,9 @@ test("rejects a request with a modified signed resource", async () => {
 test("canonical JSON sorts object keys recursively", () => {
   assert.equal(canonicalJson({ z: 1, a: { y: 2, b: 3 } }), '{"a":{"b":3,"y":2},"z":1}');
 });
+
+test("canonical JSON rejects values outside the JSON data model", () => {
+  assert.throws(() => canonicalJson({ value: undefined }), /undefined/);
+  assert.throws(() => canonicalJson({ value: Number.NaN }), /non-finite/);
+  assert.throws(() => canonicalJson(new Date()), /plain objects/);
+});

@@ -1,8 +1,11 @@
 import { createHash } from "node:crypto";
 
-const SECRET_KEY = /password|token|secret|cookie|authorization|credential|private.?key|api.?key/i;\n\nfunction safeResource(value) {
+const SECRET_KEY = /password|token|secret|cookie|authorization|credential|private.?key|api.?key/i;
+
+function safeResource(value) {
   const resource = String(value ?? "*").slice(0, 4096);
-  const isAbsolutePath = resource.startsWith("/") || resource.startsWith("\\\\") || /^[A-Za-z]:[\\/]/.test(resource);
+  const isWindowsDrivePath = /^[A-Za-z]:/.test(resource) && (resource[2] === "/" || resource[2] === "\\");
+  const isAbsolutePath = resource.startsWith("/") || resource.startsWith("\\\\") || isWindowsDrivePath;
   if (isAbsolutePath) {
     return `[LOCAL_PATH:${createHash("sha256").update(resource).digest("hex").slice(0, 12)}]`;
   }
