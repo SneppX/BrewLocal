@@ -12,7 +12,7 @@ import { getSystemInfo } from "./core/system-info.mjs";
 import { resolveDirectory, resolveTextFile, listDirectory, readTextFile, resolveWritableTarget, writeTextFile, deleteFile } from "./core/filesystem.mjs";
 
 const SERVER_NAME = "brewpilot-local";
-const VERSION = "0.3.0";
+const VERSION = "0.3.1";
 const policyStore = new PolicyStore();
 const permissionManager = new PermissionManager();
 const auditLog = new AuditLog();
