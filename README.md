@@ -10,6 +10,7 @@ BrewPilot Local is a cross-platform stdio MCP server for local browser automatio
 - Exact one-time approvals bound to the operation, resource, and SHA-256 argument digest.
 - Exact-resource session grants and explicit persistent policies.
 - Fresh one-time confirmation for external and destructive operations, even when a persistent allow rule exists.
+- Browser clicks and form edits are treated as external actions; scrolling and page inspection are read-only.
 - Basic system information without usernames, hostnames, environment variables, file contents, or process lists.
 - Shallow local directory listing and bounded UTF-8 file reads.
 - Bounded UTF-8 file creation and overwrite with atomic replacement.
@@ -28,7 +29,7 @@ File operations are scoped to exact canonical paths:
 - `files/write` — create a new text file. Overwriting an existing file is classified as destructive.
 - `files/delete` — always classified as destructive.
 
-Unmatched operations are denied. External and destructive operations require a fresh exact one-time approval. Persistent policies cannot bypass those checks. Privileged operations remain blocked until a separate operating-system authorization adapter exists.
+Unmatched operations are denied. External and destructive operations require a fresh exact one-time approval. Persistent policies cannot bypass those checks. Browser clicks, typing, and form filling also require fresh confirmation because they can change remote state. Scrolling, screenshots, extraction, and inspection use read-only risk classification. Privileged operations remain blocked until a separate operating-system authorization adapter exists.
 
 ## Cloud bridge status
 
