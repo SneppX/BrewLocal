@@ -1,5 +1,6 @@
 import { constants } from "node:fs";
-import { open, readdir, realpath, stat } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { lstat, open, readdir, realpath, stat, unlink, rename } from "node:fs/promises";
 import path from "node:path";
 
 function requireAbsolutePath(input, label) {
@@ -62,4 +63,71 @@ export async function readTextFile(input, { maxBytes = 262_144 } = {}) {
   } finally {
     await handle.close();
   }
+}
+
+
+export async function resolveWritableTarget(input) {
+  const requested = requireAbsolutePath(input, "File path");
+  const parent = await realpath(path.dirname(requested));
+  const name = path.basename(requested);
+  if (!name || name === "." || name === "..") throw new TypeError("A file name is required.");
+  const target = path.join(parent, name);
+  try {
+    const details = await lstat(target);
+    if (details.isSymbolicLink()) throw new TypeError("Symbolic links are not supported for file writes.");
+    if (!details.isFile()) throw new TypeError("The requested path is not a regular file.");
+    return { path: target, exists: true };
+  } catch (error) {
+    if (error?.code === "ENOENT") return { path: target, exists: false };
+    throw error;
+  }
+}
+
+export async function writeTextFile(input, content, { overwrite = false, maxBytes = 262_144 } = {}) {
+  if (typeof content !== "string") throw new TypeError("File content must be a UTF-8 string.");
+  if (content.includes("\\0")) throw new TypeError("NUL bytes are not supported in text files.");
+  if (!Number.isInteger(maxBytes) || maxBytes < 1 || maxBytes > 262_144) {
+    throw new RangeError("maxBytes must be between 1 and 262144.");
+  }
+  const bytes = Buffer.byteLength(content, "utf8");
+  if (bytes > maxBytes) throw new RangeError(`Content exceeds the ${maxBytes}-byte write limit.`);
+  const target = await resolveWritableTarget(input);
+  if (target.exists && !overwrite) throw new Error("The target file already exists. Set overwrite=true only after explicit approval.");
+
+  if (!target.exists) {
+    const handle = await open(target.path, "wx", 0o600);
+    try {
+      await handle.writeFile(content, "utf8");
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
+    return { path: target.path, bytes, created: true, overwritten: false };
+  }
+
+  const temporary = path.join(path.dirname(target.path), `.brewpilot-${randomUUID()}.tmp`);
+  const handle = await open(temporary, "wx", 0o600);
+  try {
+    await handle.writeFile(content, "utf8");
+    await handle.sync();
+  } catch (error) {
+    await handle.close().catch(() => {});
+    await unlink(temporary).catch(() => {});
+    throw error;
+  }
+  await handle.close();
+  try {
+    await rename(temporary, target.path);
+  } catch (error) {
+    await unlink(temporary).catch(() => {});
+    throw error;
+  }
+  return { path: target.path, bytes, created: false, overwritten: true };
+}
+
+export async function deleteFile(input) {
+  const target = await resolveWritableTarget(input);
+  if (!target.exists) throw new Error("The requested file does not exist.");
+  await unlink(target.path);
+  return { path: target.path, deleted: true };
 }
