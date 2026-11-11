@@ -22,8 +22,9 @@ function validatePrivateKey(privateKeyPem) {
   return privateKeyPem;
 }
 
-function accountNameForDevice(deviceId) {
-  return "device:" + createHash("sha256").update(deviceId, "utf8").digest("hex");
+function accountNameForDevice(accountId, deviceId) {
+  const scopedIdentity = accountId + String.fromCharCode(0) + deviceId;
+  return "device:" + createHash("sha256").update(scopedIdentity, "utf8").digest("hex");
 }
 
 function keyringOptions(platform) {
@@ -34,7 +35,8 @@ function keyringOptions(platform) {
   return undefined;
 }
 
-export async function createDeviceKeyStore({ deviceId, platform = process.platform, EntryClass } = {}) {
+export async function createDeviceKeyStore({ accountId, deviceId, platform = process.platform, EntryClass } = {}) {
+  validateDeviceId(accountId);
   validateDeviceId(deviceId);
   const adapter = getPlatformAdapter(platform);
   if (!adapter.supported) {
@@ -54,8 +56,8 @@ export async function createDeviceKeyStore({ deviceId, platform = process.platfo
   try {
     const options = keyringOptions(adapter.id);
     entry = options
-      ? new NativeEntry(SERVICE_NAME, accountNameForDevice(deviceId), options)
-      : new NativeEntry(SERVICE_NAME, accountNameForDevice(deviceId));
+      ? new NativeEntry(SERVICE_NAME, accountNameForDevice(accountId, deviceId), options)
+      : new NativeEntry(SERVICE_NAME, accountNameForDevice(accountId, deviceId));
   } catch {
     throw new Error("The operating system credential store could not be opened. No plaintext fallback is permitted.");
   }
