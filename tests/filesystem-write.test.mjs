@@ -27,7 +27,7 @@ test("overwrites only when explicitly requested and uses the bounded write limit
     assert.equal(result.overwritten, true);
     assert.equal(await readFile(file, "utf8"), "new value");
     await assert.rejects(writeTextFile(file, "x".repeat(33), { overwrite: true, maxBytes: 32 }), /write limit/);
-    await assert.rejects(writeTextFile(path.join(root, "nul.txt"), "bad\\0text"), /NUL/);
+    await assert.rejects(writeTextFile(path.join(root, "nul.txt"), "bad\0text"), /NUL/);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
