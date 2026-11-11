@@ -1,4 +1,4 @@
-const SECRET_KEY = /password|token|secret|cookie|authorization|credential|private.?key|api.?key/i;
+import { createHash } from "node:crypto";\n\nconst SECRET_KEY = /password|token|secret|cookie|authorization|credential|private.?key|api.?key/i;\n\nfunction safeResource(value) {\n  const resource = String(value ?? "*").slice(0, 4096);\n  if (/^(?:[A-Za-z]:[\\\\/]|\\\\\\\\|\\/)/.test(resource)) {\n    return `[LOCAL_PATH:${createHash("sha256").update(resource).digest("hex").slice(0, 12)}]`;\n  }\n  return resource.slice(0, 512);\n}
 
 function redact(value) {
   if (Array.isArray(value)) return value.map(redact);
@@ -17,7 +17,7 @@ export class AuditLog {
       capability: String(event.capability ?? "unknown").slice(0, 128),
       operation: String(event.operation ?? "unknown").slice(0, 128),
       decision: String(event.decision ?? "unknown").slice(0, 32),
-      resource: String(event.resource ?? "*").slice(0, 512),
+      resource: safeResource(event.resource),
       metadata: redact(event.metadata ?? {}),
     });
     this.#events.push(safe);

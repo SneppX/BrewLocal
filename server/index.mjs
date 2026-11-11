@@ -9,6 +9,7 @@ import { PermissionManager, RiskLevel } from "./core/permissions.mjs";
 import { PolicyStore } from "./core/policy-store.mjs";
 import { AuditLog } from "./core/audit.mjs";
 import { getSystemInfo } from "./core/system-info.mjs";
+import { resolveDirectory, resolveTextFile, listDirectory, readTextFile } from "./core/filesystem.mjs";
 
 const SERVER_NAME = "brewpilot-local";
 const VERSION = "0.2.1";
