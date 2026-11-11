@@ -147,17 +147,29 @@ export class PermissionManager {
     if (request.requiresElevation || request.risk === RiskLevel.PRIVILEGED) {
       return { decision: "ask", reason: "Operating-system elevation requires separate authorization." };
     }
-    if (request.risk === RiskLevel.DESTRUCTIVE) {
-      return { decision: "ask", reason: "Destructive operations always require fresh confirmation." };
-    }
     const key = this.#key(request);
+    let grant = this.#oneTimeGrants.get(key);
+    if (grant && grant.expiresAt <= Date.now()) {
+      this.#oneTimeGrants.delete(key);
+      grant = null;
+    }
+    if (request.risk === RiskLevel.DESTRUCTIVE || request.risk === RiskLevel.EXTERNAL) {
+      if (grant && grant.argumentDigest === input.argumentDigest) {
+        this.#oneTimeGrants.delete(key);
+        return { decision: "allow", reason: "Fresh one-time confirmation consumed." };
+      }
+      return {
+        decision: "ask",
+        reason: request.risk === RiskLevel.DESTRUCTIVE
+          ? "Destructive operations always require fresh confirmation."
+          : "External operations always require fresh confirmation.",
+      };
+    }
     if (policy.mode === PermissionMode.ASK) {
-      const grant = this.#oneTimeGrants.get(key);
-      if (grant && grant.expiresAt > Date.now() && grant.argumentDigest === input.argumentDigest) {
+      if (grant && grant.argumentDigest === input.argumentDigest) {
         this.#oneTimeGrants.delete(key);
         return { decision: "allow", reason: "One-time approval consumed." };
       }
-      if (grant && grant.expiresAt <= Date.now()) this.#oneTimeGrants.delete(key);
       return { decision: "ask", reason: "This operation requires fresh user approval." };
     }
     if (policy.mode === PermissionMode.SESSION) {
