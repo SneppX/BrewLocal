@@ -15,9 +15,10 @@ function validEnvelope(input) {
   if (typeof input.deviceId !== "string" || input.deviceId.length < 8 || input.deviceId.length > 128) return false;
   if (!Number.isSafeInteger(input.issuedAt) || !Number.isSafeInteger(input.expiresAt)) return false;
   if (typeof input.nonce !== "string" || input.nonce.length < 22 || input.nonce.length > 128) return false;
-  for (const field of ["capability", "operation", "resource"]) {
-    if (typeof input[field] !== "string" || !input[field].trim() || input[field].length > 1024) return false;
+  for (const field of ["capability", "operation"]) {
+    if (typeof input[field] !== "string" || !input[field].trim() || input[field].length > 96) return false;
   }
+  if (typeof input.resource !== "string" || !input.resource.trim() || input.resource.length > 1024) return false;
   if (!RISK_LEVELS.has(input.risk) || !isRecord(input.args)) return false;
   if (typeof input.argsDigest !== "string" || !/^[a-f0-9]{64}$/.test(input.argsDigest)) return false;
   if (typeof input.signature !== "string" || input.signature.length < 40 || input.signature.length > 256) return false;
