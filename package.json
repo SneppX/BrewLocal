@@ -11,5 +11,8 @@
     "test": "node --test",
     "check": "node --check server/index.mjs && node --check server/core/audit.mjs && node --check server/core/browser-policy.mjs && node --check server/core/canonical-json.mjs && node --check server/core/filesystem.mjs && node --check server/core/permissions.mjs && node --check server/core/policy-store.mjs && node --check server/core/system-info.mjs && node --check server/bridge/dispatch.mjs && node --check server/bridge/envelope.mjs && node --check server/bridge/device-identity.mjs && node --check server/bridge/nonce-store.mjs && node --check server/platform/registry.mjs && node --test"
   },
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@napi-rs/keyring": "2.1.2"
+  }
 }
