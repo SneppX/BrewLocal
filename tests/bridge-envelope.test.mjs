@@ -46,7 +46,7 @@ test("rejects replayed nonces", async () => {
 });
 
 test("rejects expired requests before signature dispatch", async () => {
-  const result = await verifySignedRequest(signedRequest(), publicKey, { now: 70_000, nonceStore: new MemoryNonceStore() });
+  const result = await verifySignedRequest(signedRequest({ expiresAt: 30_000 }), publicKey, { now: 40_000, nonceStore: new MemoryNonceStore() });
   assert.deepEqual(result, { ok: false, reason: "expired" });
 });
 
