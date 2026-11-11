@@ -38,7 +38,7 @@ jobs:
           cp server/index.mjs "$STAGE/server/index.mjs"
           cp server/core/*.mjs "$STAGE/server/core/"
           cp server/bridge/*.mjs "$STAGE/server/bridge/"
-          cp server/platform/registry.mjs "$STAGE/server/platform/"
+          cp server/platform/*.mjs "$STAGE/server/platform/"
           cp tests/*.test.mjs "$STAGE/tests/"
           cat > "$STAGE/.mcp.json" <<'EOF'
           {
