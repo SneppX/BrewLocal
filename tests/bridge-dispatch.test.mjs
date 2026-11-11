@@ -13,12 +13,13 @@ const deviceId = "local-device-123";
 
 function signedRequest(overrides = {}) {
   const args = overrides.args ?? {};
+  const now = Date.now();
   const unsigned = {
     protocolVersion: 1,
     requestId: `f8b7e7b0-5f55-4d12-8d39-3d4d1c86a9${String(++sequence).padStart(2,"0")}`,
     deviceId,
-    issuedAt: Date.now(),
-    expiresAt: Date.now() + 60_000,
+    issuedAt: now,
+    expiresAt: now + 60_000,
     nonce: `nonce-with-at-least-22-chars-${sequence}`,
     capability: "system",
     operation: "info",
