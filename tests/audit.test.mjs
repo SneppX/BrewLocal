@@ -19,6 +19,6 @@ test("audit log hashes Windows drive and UNC paths", () => {
   const log = new AuditLog();
   const drive = log.record({ resource: "C:\\Users\\Public\\secret.txt" });
   const unc = log.record({ resource: "\\\\server\\share\\secret.txt" });
-  assert.match(drive.resource, /^\\[LOCAL_PATH:[a-f0-9]{12}\\]$/);
-  assert.match(unc.resource, /^\\[LOCAL_PATH:[a-f0-9]{12}\\]$/);
+  assert.match(drive.resource, /^\[LOCAL_PATH:[a-f0-9]{12}\]$/);
+  assert.match(unc.resource, /^\[LOCAL_PATH:[a-f0-9]{12}\]$/);
 });
