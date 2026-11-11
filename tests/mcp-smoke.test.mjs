@@ -77,7 +77,9 @@ async function callTool(server, name, args = {}) {
 async function approveExact(server, result) {
   assert.equal(result.status, "approval_required");
   await callTool(server, "permissions_approve_once", {
-    ...result.permission,
+    capability: result.permission.capability,
+    operation: result.permission.operation,
+    resource: result.permission.resource,
     requestId: result.approval.requestId,
     argumentDigest: result.approval.argumentDigest,
   });
