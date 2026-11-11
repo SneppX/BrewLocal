@@ -294,10 +294,10 @@ async function runTool(name,a) {
   }
   const browserOperations = {
     browser_inspect: ["inspect", RiskLevel.READ],
-    browser_click: ["click", RiskLevel.WRITE],
-    browser_type: ["type", RiskLevel.WRITE],
-    browser_fill: ["fill", RiskLevel.WRITE],
-    browser_scroll: ["scroll", RiskLevel.WRITE],
+    browser_click: ["click", RiskLevel.EXTERNAL],
+    browser_type: ["type", RiskLevel.EXTERNAL],
+    browser_fill: ["fill", RiskLevel.EXTERNAL],
+    browser_scroll: ["scroll", RiskLevel.READ],
     browser_screenshot: ["screenshot", RiskLevel.READ],
     browser_extract: ["extract", RiskLevel.READ],
     browser_tabs: ["tabs", RiskLevel.READ],
