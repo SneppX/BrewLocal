@@ -40,7 +40,7 @@ test("destructive and privileged actions always require fresh approval", () => {
 
 test("wildcard one-time approvals are rejected", () => {
   const manager = new PermissionManager([{ capability: "browser", operation: "*", resource: "*", mode: "ask" }]);
-  assert.throws(() => manager.grantOnce({ capability: "browser", operation: "*", resource: "*" }));
+  assert.throws(() => manager.createApprovalRequest({ capability: "browser", operation: "*", resource: "*" }, "e".repeat(64)));
 });
 
 test("one-time approval is bound to the exact action argument digest", () => {

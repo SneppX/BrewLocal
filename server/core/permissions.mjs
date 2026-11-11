@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 export const PermissionMode = Object.freeze({
   DENY: "deny",
   ASK: "ask",
@@ -134,7 +136,7 @@ export class PermissionManager {
     this.#sessionGrants.add(this.#key(normalized));
   }
 
-  revokeSessionGrants() { this.#sessionGrants.clear(); this.#oneTimeGrants.clear(); }
+  revokeSessionGrants() { this.#sessionGrants.clear(); this.#oneTimeGrants.clear(); this.#pendingApprovals.clear(); }
 
   evaluate(input) {
     const request = makePermissionRequest(input);
