@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -96,10 +96,11 @@ test("MCP server exposes scoped file tools and enforces one-time destructive app
 
     const directory = path.join(home, "workspace");
     await mkdir(directory);
-    const filePath = path.join(directory, "notes.txt");
+    const canonicalDirectory = await realpath(directory);
+    const filePath = path.join(canonicalDirectory, "notes.txt");
 
-    await callTool(server, "permissions_set", { capability: "files", operation: "list", resource: directory, mode: "always" });
-    const listing = await callTool(server, "files_list", { directory });
+    await callTool(server, "permissions_set", { capability: "files", operation: "list", resource: canonicalDirectory, mode: "always" });
+    const listing = await callTool(server, "files_list", { directory: canonicalDirectory });
     assert.equal(listing.totalEntries, 0);
 
     await callTool(server, "permissions_set", { capability: "files", operation: "write", resource: filePath, mode: "always" });
