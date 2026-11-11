@@ -9,6 +9,8 @@ function isRecord(value) {
 
 function validEnvelope(input) {
   if (!isRecord(input) || input.protocolVersion !== 1) return false;
+  const allowedKeys = ["protocolVersion", "requestId", "deviceId", "issuedAt", "expiresAt", "nonce", "capability", "operation", "resource", "risk", "args", "argsDigest", "signature"];
+  if (Object.keys(input).some((key) => !allowedKeys.includes(key)) || Object.keys(input).length !== allowedKeys.length) return false;
   if (typeof input.requestId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.requestId)) return false;
   if (typeof input.deviceId !== "string" || input.deviceId.length < 8 || input.deviceId.length > 128) return false;
   if (!Number.isSafeInteger(input.issuedAt) || !Number.isSafeInteger(input.expiresAt)) return false;

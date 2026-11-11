@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
+import { canonicalJson } from "./core/canonical-json.mjs";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -189,7 +190,7 @@ const tools = [
 
 async function authorize(request, action, actionArgs = {}) {
   await permissionReady;
-  const argumentDigest = createHash("sha256").update(JSON.stringify(actionArgs)).digest("hex");
+  const argumentDigest = createHash("sha256").update(canonicalJson(actionArgs)).digest("hex");
   const decision = permissionManager.evaluate({ ...request, argumentDigest });
   auditLog.record({ action: "permission_check", ...request, decision: decision.decision, metadata: { reason: decision.reason } });
   if (decision.decision !== "allow") {

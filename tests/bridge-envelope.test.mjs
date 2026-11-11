@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { generateKeyPairSync, sign } from "node:crypto";
-import { canonicalJson } from "../core/canonical-json.mjs";
-import { sha256Canonical } from "./envelope.mjs";
+import { canonicalJson } from "../server/core/canonical-json.mjs";
+import { sha256Canonical, verifySignedRequest } from "../server/bridge/envelope.mjs";
 import { verifySignedRequest } from "./envelope.mjs";
 import { MemoryNonceStore } from "./nonce-store.mjs";
 
