@@ -1,4 +1,4 @@
-import { createPrivateKey, createPublicKey, generateKeyPairSync, sign } from "node:crypto";
+import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync, sign } from "node:crypto";
 
 const PROTOCOL_PREFIX = "BrewPilot Device Challenge v1";
 const SHA256_HEX = /^[a-f0-9]{64}$/;
