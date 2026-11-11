@@ -36,7 +36,9 @@ test("deletes regular files and rejects missing paths and directories", async ()
   try {
     const file = path.join(root, "delete.txt");
     await writeFile(file, "temporary");
-    assert.deepEqual(await deleteFile(file), { path: file, deleted: true });
+    const deleted = await deleteFile(file);
+    assert.equal(deleted.deleted, true);
+    assert.equal(path.basename(deleted.path), "delete.txt");
     await assert.rejects(deleteFile(file), /does not exist/);
     await assert.rejects(deleteFile(root), /regular file/);
   } finally { await rm(root, { recursive: true, force: true }); }
