@@ -55,3 +55,40 @@ export function getDevicePublicKeyFingerprint(publicKeyPem) {
   }
   return createHash("sha256").update(publicKey.export({ format: "der", type: "spki" })).digest("hex");
 }
+
+
+function requireKeyStore(keyStore) {
+  if (!keyStore || typeof keyStore.loadPrivateKey !== "function" || typeof keyStore.storePrivateKey !== "function") {
+    throw new TypeError("A compatible OS-backed device key store is required.");
+  }
+}
+
+export async function createStoredDeviceIdentity({ keyStore } = {}) {
+  requireKeyStore(keyStore);
+  let privateKeyPem = await keyStore.loadPrivateKey();
+  if (privateKeyPem === null) {
+    const generated = generateDeviceKeyPair();
+    privateKeyPem = generated.privateKeyPem;
+    await keyStore.storePrivateKey(privateKeyPem);
+  }
+
+  const privateKey = createPrivateKey(privateKeyPem);
+  if (privateKey.asymmetricKeyType !== "ed25519" || privateKey.type !== "private") {
+    throw new TypeError("The stored device identity is not a valid Ed25519 private key.");
+  }
+  const publicKeyPem = createPublicKey(privateKey).export({ format: "pem", type: "spki" }).toString();
+  return Object.freeze({
+    algorithm: "Ed25519",
+    publicKeyPem,
+    fingerprint: getDevicePublicKeyFingerprint(publicKeyPem),
+  });
+}
+
+export async function signStoredDeviceChallenge({ keyStore, userId, deviceId, challengeId, nonceHash } = {}) {
+  requireKeyStore(keyStore);
+  const privateKeyPem = await keyStore.loadPrivateKey();
+  if (privateKeyPem === null) {
+    throw new Error("No paired device identity exists in the operating system credential store.");
+  }
+  return signDeviceChallenge({ privateKeyPem, userId, deviceId, challengeId, nonceHash });
+}
