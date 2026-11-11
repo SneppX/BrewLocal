@@ -12,7 +12,7 @@ Linux is configured explicitly to require the Secret Service backend. The provid
 
 ## Security behavior
 
-- Device identifiers are validated and hashed before being used as credential account names.
+- Account and device identifiers are validated and jointly hashed before being used as credential account names, preventing a device ID reused under another account from sharing a private key.
 - Only Ed25519 private keys are accepted.
 - The credential-store provider is opened before a key is saved or loaded.
 - Provider initialization, unlock, read, write, or delete failures stop the operation.
