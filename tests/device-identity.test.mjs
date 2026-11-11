@@ -6,6 +6,8 @@ import {
   generateDeviceKeyPair,
   getDevicePublicKeyFingerprint,
   signDeviceChallenge,
+  createStoredDeviceIdentity,
+  signStoredDeviceChallenge,
 } from "../server/bridge/device-identity.mjs";
 
 test("generates an Ed25519 identity with a stable public-key fingerprint", () => {
@@ -47,4 +49,43 @@ test("rejects non-Ed25519 keys", () => {
     challengeId: "challenge",
     nonceHash: "a".repeat(64),
   }), /Ed25519/);
+});
+
+
+test("creates a public identity while keeping the private key inside the OS store", async () => {
+  let storedPrivateKey = null;
+  const keyStore = {
+    async loadPrivateKey() { return storedPrivateKey; },
+    async storePrivateKey(value) { storedPrivateKey = value; },
+  };
+  const identity = await createStoredDeviceIdentity({ keyStore });
+  assert.equal(identity.algorithm, "Ed25519");
+  assert.match(identity.publicKeyPem, /BEGIN PUBLIC KEY/);
+  assert.match(identity.fingerprint, /^[a-f0-9]{64}$/);
+  assert.equal(Object.hasOwn(identity, "privateKeyPem"), false);
+  assert.match(storedPrivateKey, /BEGIN PRIVATE KEY/);
+});
+
+test("signs a cloud challenge by loading the private key from the OS store", async () => {
+  const generated = generateDeviceKeyPair();
+  const keyStore = {
+    async loadPrivateKey() { return generated.privateKeyPem; },
+    async storePrivateKey() { assert.fail("Existing identity must not be replaced."); },
+  };
+  const input = {
+    userId: "user-1",
+    deviceId: "device-0001",
+    challengeId: "123e4567-e89b-12d3-a456-426614174000",
+    nonceHash: "b".repeat(64),
+  };
+  const signature = await signStoredDeviceChallenge({ keyStore, ...input });
+  assert.match(signature, /^[A-Za-z0-9_-]{86}$/);
+});
+
+test("does not create a replacement identity when the OS store fails", async () => {
+  const keyStore = {
+    async loadPrivateKey() { throw new Error("keychain locked"); },
+    async storePrivateKey() { assert.fail("Must not fall back to a new or plaintext key."); },
+  };
+  await assert.rejects(createStoredDeviceIdentity({ keyStore }), /keychain locked/);
 });
