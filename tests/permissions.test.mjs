@@ -13,8 +13,8 @@ test("ask policy blocks until an exact one-time approval is consumed", () => {
   assert.equal(manager.evaluate(request).decision, "ask");
   const approval = manager.createApprovalRequest(request, "a".repeat(64));
   manager.grantOnce(request, approval);
-  assert.equal(manager.evaluate(request).decision, "allow");
-  assert.equal(manager.evaluate(request).decision, "ask");
+  assert.equal(manager.evaluate({ ...request, argumentDigest: "a".repeat(64) }).decision, "allow");
+  assert.equal(manager.evaluate({ ...request, argumentDigest: "a".repeat(64) }).decision, "ask");
 });
 
 test("session grants do not cover another resource", () => {

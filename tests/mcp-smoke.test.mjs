@@ -57,7 +57,7 @@ test("MCP server exposes permission tools and gates system information", async (
     assert.equal(deniedPayload.status, "approval_required");
     assert.ok(deniedPayload.approval.requestId);
     assert.match(deniedPayload.approval.argumentDigest, /^[a-f0-9]{64}$/);
-    await server.call("tools/call", { name: "permissions_approve_once", arguments: { ...deniedPayload.permission, ...deniedPayload.approval } });
+    await server.call("tools/call", { name: "permissions_approve_once", arguments: { capability: deniedPayload.permission.capability, operation: deniedPayload.permission.operation, resource: deniedPayload.permission.resource, requestId: deniedPayload.approval.requestId, argumentDigest: deniedPayload.approval.argumentDigest } });
     const allowed = await server.call("tools/call", { name: "system_info", arguments: {} });
     const info = JSON.parse(allowed.content[0].text);
     assert.ok(info.platformName);

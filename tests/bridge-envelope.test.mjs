@@ -3,8 +3,7 @@ import assert from "node:assert/strict";
 import { generateKeyPairSync, sign } from "node:crypto";
 import { canonicalJson } from "../server/core/canonical-json.mjs";
 import { sha256Canonical, verifySignedRequest } from "../server/bridge/envelope.mjs";
-import { verifySignedRequest } from "./envelope.mjs";
-import { MemoryNonceStore } from "./nonce-store.mjs";
+import { MemoryNonceStore } from "../server/bridge/nonce-store.mjs";
 
 const { publicKey, privateKey } = generateKeyPairSync("ed25519");
 const deviceId = "device-12345678";
