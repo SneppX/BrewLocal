@@ -1,0 +1,15 @@
+{
+  "name": "brewpilot-local",
+  "version": "0.2.1",
+  "private": true,
+  "type": "module",
+  "description": "BrewPilot local MCP server and permission-gated browser automation.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check server/index.mjs && node --check server/core/audit.mjs && node --check server/core/permissions.mjs && node --check server/core/policy-store.mjs && node --check server/core/system-info.mjs && node --test"
+  },
+  "license": "UNLICENSED"
+}

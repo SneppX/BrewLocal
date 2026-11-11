@@ -1,0 +1,32 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "23 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  repository-hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check tracked files for accidental secrets
+        run: |
+          if git grep -n -I -E '(gh[pousr]_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----)' -- . ':!SECURITY.md'; then
+            echo "Potential secret material found in tracked files."
+            exit 1
+          fi
+      - name: Verify manifests and runtime entrypoint
+        run: |
+          node -e "const p=require('./package.json'); if(Number(p.engines.node.match(/\\d+/)[0])<22) process.exit(1)"
+          node -e "for (const f of ['plugin.json','.codex-plugin/plugin.json','.mcp.json','mcp.json']) JSON.parse(require('fs').readFileSync(f,'utf8'))"
+          node --check server/index.mjs
