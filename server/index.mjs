@@ -6,6 +6,7 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { PermissionManager, RiskLevel } from "./core/permissions.mjs";
+import { BROWSER_OPERATION_POLICY } from "./core/browser-policy.mjs";
 import { PolicyStore } from "./core/policy-store.mjs";
 import { AuditLog } from "./core/audit.mjs";
 import { getSystemInfo } from "./core/system-info.mjs";
@@ -292,20 +293,9 @@ async function runTool(name,a) {
       return {url:await evaluate("location.href"),title:await evaluate("document.title")};
     }, a);
   }
-  const browserOperations = {
-    browser_inspect: ["inspect", RiskLevel.READ],
-    browser_click: ["click", RiskLevel.EXTERNAL],
-    browser_type: ["type", RiskLevel.EXTERNAL],
-    browser_fill: ["fill", RiskLevel.EXTERNAL],
-    browser_scroll: ["scroll", RiskLevel.READ],
-    browser_screenshot: ["screenshot", RiskLevel.READ],
-    browser_extract: ["extract", RiskLevel.READ],
-    browser_tabs: ["tabs", RiskLevel.READ],
-    browser_wait: ["wait", RiskLevel.READ],
-  };
-  const operation = browserOperations[name];
+  const operation = BROWSER_OPERATION_POLICY[name];
   if (!operation) throw new Error("Unknown tool: " + name);
-  return authorize({ capability: "browser", operation: operation[0], resource: activeResource, risk: operation[1] }, async () => {
+  return authorize({ capability: "browser", operation: operation.operation, resource: activeResource, risk: operation.risk }, async () => {
     if(!cdp || cdp.readyState!==WebSocket.OPEN) throw new Error("No browser session. Call browser_launch first.");
     if(name==="browser_inspect"){
       return await evaluate(`(()=>({url:location.href,title:document.title,text:(document.body?.innerText||"").slice(0,${Math.max(500,Math.min(20000,a.maxTextChars||8000))}),elements:[...document.querySelectorAll('a,button,input,textarea,select,[role=button]')].slice(0,150).map((e,i)=>({index:i,tag:e.tagName,role:e.getAttribute('role'),text:(e.innerText||e.getAttribute('aria-label')||e.placeholder||e.value||'').trim().slice(0,180),type:e.type||null,selector:e.id?'#'+CSS.escape(e.id):e.getAttribute('name')?e.tagName.toLowerCase()+'[name="'+CSS.escape(e.getAttribute('name'))+'"]':null,disabled:!!e.disabled}))}))()`);
