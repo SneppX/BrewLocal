@@ -4,6 +4,9 @@ This module is a transport-neutral receiver and dispatcher for signed requests f
 
 ## Implemented
 
+- Account-scoped Ed25519 device identity generation and challenge signing.
+- Private-key persistence through native OS credential stores: Windows Credential Manager, macOS Keychain, and Linux Secret Service only. No plaintext fallback is allowed.
+
 - Ed25519 signature verification over canonical JSON.
 - Exact envelope schema and argument-digest validation.
 - 60-second maximum request lifetime and bounded clock skew.
