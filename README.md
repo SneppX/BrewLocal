@@ -19,6 +19,7 @@ BrewPilot Local is a cross-platform stdio MCP server for local browser automatio
 - Redacted in-memory audit events, including hashed absolute local paths.
 - Signed Ed25519 request verification, canonical JSON, expiry checks, and in-memory replay protection.
 - Windows, macOS, and Linux platform registry.
+- Account-scoped Ed25519 device identities backed by Windows Credential Manager, macOS Keychain, or Linux Secret Service. No plaintext key fallback is permitted.
 
 ## Local file permissions
 
@@ -33,7 +34,7 @@ Unmatched operations are denied. External and destructive operations require a f
 
 ## Cloud bridge status
 
-The repository includes signed request verification and a transport-neutral dispatcher. It does **not** yet include device pairing, durable nonce storage, the authenticated outbound relay, a cloud request queue, or an end-to-end deployed cloud service. Do not describe this repository as connected to ChatGPT or as a remote-control agent until those components are implemented and verified.
+The repository includes signed request verification, a transport-neutral dispatcher, and OS-backed device identity storage. It does **not** yet include the local pairing transport, durable nonce storage, the authenticated outbound relay, a cloud request queue, or an end-to-end deployed cloud service. Do not describe this repository as connected to ChatGPT or as a remote-control agent until those components are implemented and verified.
 
 ## Runtime
 
