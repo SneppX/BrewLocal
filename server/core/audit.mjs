@@ -1,4 +1,13 @@
-import { createHash } from "node:crypto";\n\nconst SECRET_KEY = /password|token|secret|cookie|authorization|credential|private.?key|api.?key/i;\n\nfunction safeResource(value) {\n  const resource = String(value ?? "*").slice(0, 4096);\n  if (/^(?:[A-Za-z]:[\\\\/]|\\\\\\\\|\\/)/.test(resource)) {\n    return `[LOCAL_PATH:${createHash("sha256").update(resource).digest("hex").slice(0, 12)}]`;\n  }\n  return resource.slice(0, 512);\n}
+import { createHash } from "node:crypto";
+
+const SECRET_KEY = /password|token|secret|cookie|authorization|credential|private.?key|api.?key/i;\n\nfunction safeResource(value) {
+  const resource = String(value ?? "*").slice(0, 4096);
+  const isAbsolutePath = resource.startsWith("/") || resource.startsWith("\\\\") || /^[A-Za-z]:[\\/]/.test(resource);
+  if (isAbsolutePath) {
+    return `[LOCAL_PATH:${createHash("sha256").update(resource).digest("hex").slice(0, 12)}]`;
+  }
+  return resource.slice(0, 512);
+}
 
 function redact(value) {
   if (Array.isArray(value)) return value.map(redact);

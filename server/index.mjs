@@ -169,12 +169,14 @@ async function launchBrowser(args={}) {
 const tools = [
  {name:"permissions_list",description:"List BrewPilot's local permission policies. Unmatched operations are denied by default.",inputSchema:{type:"object",properties:{},additionalProperties:false}},
  {name:"permissions_set",description:"Create or replace one local permission rule. Modes: deny, ask, session, always. Use exact capability, operation and resource values for narrow rules; wildcards are broad and must be deliberate.",inputSchema:{type:"object",properties:{capability:{type:"string",minLength:1,maxLength:128},operation:{type:"string",minLength:1,maxLength:128},resource:{type:"string",minLength:1,maxLength:512},mode:{type:"string",enum:["deny","ask","session","always"]}},required:["capability","operation","mode"],additionalProperties:false}},
- {name:"permissions_approve_once",description:"Approve one exact capability, operation and resource for one next execution. Call only after the user explicitly confirms that specific action.",inputSchema:{type:"object",properties:{capability:{type:"string",minLength:1,maxLength:128},operation:{type:"string",minLength:1,maxLength:128},resource:{type:"string",minLength:1,maxLength:512}},required:["capability","operation","resource"],additionalProperties:false}},
+ {name:"permissions_approve_once",description:"Approve one pending action for 60 seconds. Requires the exact requestId and argumentDigest returned by approval_required, plus the exact capability, operation and resource. Call only after explicit user confirmation.",inputSchema:{type:"object",properties:{requestId:{type:"string",format:"uuid"},argumentDigest:{type:"string",pattern:"^[a-f0-9]{64}$"},capability:{type:"string",minLength:1,maxLength:128},operation:{type:"string",minLength:1,maxLength:128},resource:{type:"string",minLength:1,maxLength:512}},required:["requestId","argumentDigest","capability","operation","resource"],additionalProperties:false}},
  {name:"permissions_grant_session",description:"Grant one exact capability, operation and resource for this plugin process session. The matching policy must be in session mode. Call only after explicit user approval.",inputSchema:{type:"object",properties:{capability:{type:"string",minLength:1,maxLength:128},operation:{type:"string",minLength:1,maxLength:128},resource:{type:"string",minLength:1,maxLength:512}},required:["capability","operation","resource"],additionalProperties:false}},
  {name:"permissions_revoke_session",description:"Revoke all temporary permission grants for this plugin process session.",inputSchema:{type:"object",properties:{},additionalProperties:false}},
  {name:"permissions_reset",description:"Remove all saved permission rules. After reset, every capability is denied by default.",inputSchema:{type:"object",properties:{},additionalProperties:false}},
  {name:"audit_list",description:"List recent permission decisions from the current plugin process session. Audit metadata is redacted and is not a persistent history in this release.",inputSchema:{type:"object",properties:{limit:{type:"integer",minimum:1,maximum:500}},additionalProperties:false}},
  {name:"system_info",description:"Read basic operating-system and hardware information. Does not return usernames, hostnames, environment variables, files, or process lists. Requires the system/info/system permission.",inputSchema:{type:"object",properties:{},additionalProperties:false}},
+ {name:"files_list",description:"List metadata for entries in one exact local directory. No recursive traversal. Requires a matching files/list/path permission; unmatched paths are denied.",inputSchema:{type:"object",properties:{directory:{type:"string",minLength:1,maxLength:4096},maxEntries:{type:"integer",minimum:1,maximum:200}},required:["directory"],additionalProperties:false}},
+ {name:"files_read",description:"Read one bounded UTF-8 text file from an exact local path. Binary files and files above the configured limit are rejected. Requires a matching files/read/path permission.",inputSchema:{type:"object",properties:{filePath:{type:"string",minLength:1,maxLength:4096},maxBytes:{type:"integer",minimum:1024,maximum:262144}},required:["filePath"],additionalProperties:false}},
  {name:"browser_launch",description:"Launch an isolated local Chromium-based browser. Requires browser/launch/local-browser permission.",inputSchema:{type:"object",properties:{browser:{type:"string",description:"auto, chrome, edge, brave, vivaldi, opera, chromium, or custom"},executablePath:{type:"string"},headless:{type:"boolean"}},additionalProperties:false}},
  {name:"browser_navigate",description:"Navigate the active tab to an HTTP(S) URL. Permission is scoped to the destination hostname.",inputSchema:{type:"object",properties:{url:{type:"string"}},required:["url"],additionalProperties:false}},
  {name:"browser_inspect",description:"Inspect the current page title, URL, visible text, and interactive elements.",inputSchema:{type:"object",properties:{maxTextChars:{type:"integer",minimum:500,maximum:20000}},additionalProperties:false}},
@@ -246,6 +248,14 @@ async function runTool(name,a) {
   if (name === "audit_list") return { events: auditLog.list(a.limit ?? 100), persistence: "current process session only" };
   if (name === "system_info") {
     return authorize({ capability: "system", operation: "info", resource: "system", risk: RiskLevel.READ }, async () => getSystemInfo(), a);
+  }
+  if (name === "files_list") {
+    const directory = await resolveDirectory(a.directory);
+    return authorize({ capability: "files", operation: "list", resource: directory, risk: RiskLevel.READ }, async () => listDirectory(directory, { maxEntries: a.maxEntries }), a);
+  }
+  if (name === "files_read") {
+    const filePath = await resolveTextFile(a.filePath, { maxBytes: a.maxBytes });
+    return authorize({ capability: "files", operation: "read", resource: filePath, risk: RiskLevel.READ }, async () => readTextFile(filePath, { maxBytes: a.maxBytes }), a);
   }
   if (name === "browser_stop") {
     if(cdp){try{cdp.close()}catch{} cdp=null;}
