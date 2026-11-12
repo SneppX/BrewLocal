@@ -15,6 +15,15 @@ function startServer(home) {
   const lines = readline.createInterface({ input: child.stdout });
   const pending = new Map();
   let nextId = 0;
+  let stderr = "";
+  child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
+  child.on("exit", (code, signal) => {
+    for (const [id, entry] of pending) {
+      clearTimeout(entry.timer);
+      entry.reject(new Error(`MCP server exited before response (code=${code}, signal=${signal}): ${stderr.trim()}`));
+      pending.delete(id);
+    }
+  });
   lines.on("line", (line) => {
     let message;
     try { message = JSON.parse(line); } catch { return; }
