@@ -7,6 +7,9 @@ on:
       - "server/platform/device-key-store.mjs"
       - "tests/**"
       - "package.json"
+      - "plugin.json"
+      - ".codex-plugin/plugin.json"
+      - ".github/workflows/package-plugin.yml"
       - ".github/workflows/native-keyring.yml"
   pull_request:
     paths:
