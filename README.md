@@ -19,7 +19,9 @@ BrewPilot Local is a cross-platform stdio MCP server for local browser automatio
 - Redacted in-memory audit events, including hashed absolute local paths.
 - Signed Ed25519 request verification, canonical JSON, expiry checks, and in-memory replay protection.
 - Windows, macOS, and Linux platform registry.
-- Account-scoped Ed25519 device identities backed by Windows Credential Manager, macOS Keychain, or Linux Secret Service. No plaintext key fallback is permitted.\n- Headless cloud device authorization with a short user code and one-time device code.\n- Cloud device-session tokens stored separately from the private key in the native OS credential store, with expiry checks and explicit deletion.
+- Account-scoped Ed25519 device identities backed by Windows Credential Manager, macOS Keychain, or Linux Secret Service. No plaintext key fallback is permitted.
+- Headless cloud device authorization with a short user code and one-time device code.
+- Cloud device-session tokens stored separately from the private key in the native OS credential store, with expiry checks and explicit deletion.
 
 ## Local file permissions
 
