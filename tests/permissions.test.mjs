@@ -93,3 +93,12 @@ test("privileged actions remain blocked pending operating-system authorization",
   manager.grantOnce(privileged, approval);
   assert.equal(manager.evaluate({ ...privileged, argumentDigest: digest }).decision, "ask");
 });
+
+test("changing a policy invalidates pending one-time approvals", () => {
+  const manager = new PermissionManager([{ capability: "browser", operation: "navigate", resource: "example.com", mode: "ask" }]);
+  const digest = "b".repeat(64);
+  const approval = manager.createApprovalRequest(request, digest);
+  manager.setPolicy({ ...request, mode: "ask" });
+  assert.throws(() => manager.grantOnce(request, approval), /missing or expired/);
+  assert.equal(manager.evaluate({ ...request, argumentDigest: digest }).decision, "ask");
+});
