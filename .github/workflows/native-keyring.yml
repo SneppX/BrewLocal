@@ -1,0 +1,56 @@
+name: Native OS credential-store integration
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "server/platform/device-key-store.mjs"
+      - "tests/native-keyring-smoke.mjs"
+      - "package.json"
+      - ".github/workflows/native-keyring.yml"
+  pull_request:
+    paths:
+      - "server/platform/device-key-store.mjs"
+      - "tests/native-keyring-smoke.mjs"
+      - "package.json"
+      - ".github/workflows/native-keyring.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-keyring:
+    name: Native keyring on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Prepare Linux Secret Service
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y dbus-x11 gnome-keyring
+      - name: Run Linux Secret Service integration
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          dbus-run-session -- bash -lc 'eval "$(printf "%s" "brewpilot-ci-only" | gnome-keyring-daemon --unlock --components=secrets)"; node tests/native-keyring-smoke.mjs'
+      - name: Prepare macOS test keychain
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/brewpilot-ci.keychain-db"
+          security create-keychain -p "brewpilot-ci-only" "$KEYCHAIN"
+          security unlock-keychain -p "brewpilot-ci-only" "$KEYCHAIN"
+          security set-keychain-settings -lut 3600 "$KEYCHAIN"
+          security default-keychain -s "$KEYCHAIN"
+      - name: Run native credential-store integration
+        if: runner.os != 'Linux'
+        run: node tests/native-keyring-smoke.mjs
