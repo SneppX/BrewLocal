@@ -82,8 +82,7 @@ export function createBrewPilotDeviceAuthorizationClient({
     }
   }
 
-  return Object.freeze({
-    async begin() {
+  const begin = async () => {
       let response = await post("/v1/device-authorizations/begin", { deviceId });
       if (!response.ok) throw new Error("BrewPilot Cloud could not start device authorization.");
       const payload = await readJson(response);
@@ -103,9 +102,9 @@ export function createBrewPilotDeviceAuthorizationClient({
         intervalSeconds: payload.intervalSeconds,
         verificationInstructions: payload.verificationInstructions,
       });
-    },
+  };
 
-    async poll() {
+  const poll = async () => {
       if (!activeDeviceCode) throw new Error("Start device authorization before polling.");
       if (Date.now() >= activeExpiresAt) {
         activeDeviceCode = null;
@@ -146,12 +145,12 @@ export function createBrewPilotDeviceAuthorizationClient({
       activeDeviceCode = null;
       await keyStore.storeSessionToken({ token: payload.token, expiresAt: payload.expiresAt });
       return Object.freeze({ status: "authorized", expiresAt: payload.expiresAt });
-    },
+  };
 
-    async waitForApproval({ onPending, signal } = {}) {
-      if (!activeDeviceCode) await this.begin();
+  const waitForApproval = async ({ onPending, signal } = {}) => {
+      if (!activeDeviceCode) await begin();
       while (activeDeviceCode && Date.now() < activeExpiresAt) {
-        const result = await this.poll();
+        const result = await poll();
         if (result.status === "authorized" || result.status === "expired" || result.status === "already_used") {
           return result;
         }
@@ -159,14 +158,13 @@ export function createBrewPilotDeviceAuthorizationClient({
         await sleepImpl(result.intervalSeconds * 1000, signal);
       }
       return Object.freeze({ status: "expired" });
-    },
+  };
 
-    async loadSession() {
-      return keyStore.loadSessionToken();
-    },
-
-    async clearSession() {
-      await keyStore.deleteSessionToken();
-    },
+  return Object.freeze({
+    begin,
+    poll,
+    waitForApproval,
+    async loadSession() { return keyStore.loadSessionToken(); },
+    async clearSession() { await keyStore.deleteSessionToken(); },
   });
 }
