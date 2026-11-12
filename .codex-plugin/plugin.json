@@ -1,7 +1,7 @@
 {
   "interface": {
     "displayName": "BrewPilot",
-    "shortDescription": "Local automation with explicit permissions",
+    "shortDescription": "Local automation with controls",
     "longDescription": "BrewPilot runs locally through stdio. It provides permission-gated Chromium browser automation, basic system information, and bounded local UTF-8 file operations. Unmatched operations are denied. Destructive and external operations require exact one-time confirmation. Privileged operating-system actions and cloud relay functionality are not included in this local package.",
     "developerName": "SneppX",
     "category": "Productivity",
