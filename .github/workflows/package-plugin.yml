@@ -10,6 +10,10 @@ on:
       - "package.json"
       - "README.md"
       - "mcp.json"
+      - ".mcp.json"
+      - "plugin.json"
+      - ".codex-plugin/plugin.json"
+      - "skills/**"
       - ".github/workflows/package-plugin.yml"
 
 permissions:
@@ -84,7 +88,7 @@ jobs:
             },
             "name": "brewpilot",
             "version": "0.3.2",
-            "description": "Local browser automation and permission-gated file operations.",
+            "description": "Local browser automation and permission-gated, scoped file operations.",
             "author": { "name": "SneppX" },
             "keywords": ["local", "browser", "automation", "filesystem", "permissions", "mcp"],
             "skills": "./skills",
