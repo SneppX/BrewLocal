@@ -47,7 +47,7 @@ test("MCP server exposes permission tools and gates system information", async (
   const server = startServer(home);
   try {
     const initialized = await server.call("initialize", { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "test", version: "1" } });
-    assert.equal(initialized.serverInfo.version, "0.3.2");
+    assert.equal(initialized.serverInfo.version, "0.3.4");
     const listed = await server.call("tools/list");
     const names = listed.tools.map((tool) => tool.name);
     assert.ok(names.includes("permissions_approve_once"));

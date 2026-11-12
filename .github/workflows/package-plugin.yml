@@ -9,6 +9,8 @@ on:
       - "tests/**"
       - "package.json"
       - "README.md"
+      - "packaging/**"
+      - "assets/**"
       - "mcp.json"
       - ".mcp.json"
       - "plugin.json"
@@ -27,36 +29,37 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Verify local source
+      - name: Verify full source repository
         run: |
           npm install --no-audit --no-fund
           npm run check
-      - name: Assemble plugin package
+      - name: Assemble isolated local plugin package
         shell: bash
         run: |
           set -euo pipefail
           ROOT="$GITHUB_WORKSPACE"
           STAGE="$ROOT/dist/plugin"
-          mkdir -p "$STAGE/server/core" "$STAGE/server/bridge" "$STAGE/server/platform" "$STAGE/tests" "$STAGE/skills/browser-automation" "$STAGE/.codex-plugin"
-          cp package.json README.md mcp.json .mcp.json plugin.json "$STAGE/"
+          mkdir -p "$STAGE/server/core" "$STAGE/tests" "$STAGE/skills/browser-automation" "$STAGE/.codex-plugin" "$STAGE/assets"
+          cp mcp.json .mcp.json plugin.json "$STAGE/"
           cp .codex-plugin/plugin.json "$STAGE/.codex-plugin/plugin.json"
           cp skills/browser-automation/SKILL.md "$STAGE/skills/browser-automation/SKILL.md"
+          cp packaging/README.plugin.md "$STAGE/README.md"
+          cp assets/brewpilot-icon.svg "$STAGE/assets/brewpilot-icon.svg"
           cp server/index.mjs "$STAGE/server/index.mjs"
           cp server/core/*.mjs "$STAGE/server/core/"
-          cp server/bridge/*.mjs "$STAGE/server/bridge/"
-          cp server/platform/*.mjs "$STAGE/server/platform/"
-          cp tests/*.test.mjs "$STAGE/tests/"
+          cp tests/audit.test.mjs tests/browser-policy.test.mjs tests/filesystem.test.mjs tests/filesystem-write.test.mjs tests/manifests.test.mjs tests/mcp-smoke.test.mjs tests/permissions.test.mjs tests/policy-store.test.mjs "$STAGE/tests/"
+          node -e 'const fs=require("node:fs");const p=JSON.parse(fs.readFileSync("package.json","utf8"));p.private=true;p.description="BrewPilot local stdio MCP runtime";p.dependencies={};p.scripts={test:"node --test"};fs.writeFileSync(process.argv[1],JSON.stringify(p,null,2)+"\\n")' "$STAGE/package.json"
           cd "$STAGE"
           npm test
-          zip -qr "$ROOT/dist/brewpilot-local-plugin-update.zip" .
+          zip -qr "$ROOT/dist/brewpilot-local-plugin-0.3.4.zip" .
           cd "$ROOT/dist"
-          sha256sum brewpilot-local-plugin-update.zip > SHA256SUMS
-      - name: Upload plugin package
+          sha256sum brewpilot-local-plugin-0.3.4.zip > SHA256SUMS
+      - name: Upload isolated plugin package
         uses: actions/upload-artifact@v4
         with:
-          name: brewpilot-local-plugin-0.3.2
+          name: brewpilot-local-plugin-0.3.4
           path: |
-            dist/brewpilot-local-plugin-update.zip
+            dist/brewpilot-local-plugin-0.3.4.zip
             dist/SHA256SUMS
           if-no-files-found: error
           retention-days: 14
