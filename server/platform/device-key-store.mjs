@@ -67,11 +67,15 @@ export async function createDeviceKeyStore({ accountId, deviceId, platform = pro
   }
 
   let entry;
+  let sessionEntry;
   try {
     const options = keyringOptions(adapter.id);
     entry = options
       ? new NativeEntry(SERVICE_NAME, accountNameForDevice(accountId, deviceId), options)
       : new NativeEntry(SERVICE_NAME, accountNameForDevice(accountId, deviceId));
+    sessionEntry = options
+      ? new NativeEntry(SERVICE_NAME, sessionAccountNameForDevice(accountId, deviceId), options)
+      : new NativeEntry(SERVICE_NAME, sessionAccountNameForDevice(accountId, deviceId));
   } catch {
     throw new Error("The operating system credential store could not be opened. No plaintext fallback is permitted.");
   }
@@ -100,6 +104,46 @@ export async function createDeviceKeyStore({ accountId, deviceId, platform = pro
         entry.deletePassword();
       } catch {
         throw new Error("The operating system credential store could not delete the private key.");
+      }
+    },
+    async storeSessionToken(record) {
+      const validated = validateSessionRecord(record);
+      if (validated.expiresAt <= Date.now()) {
+        throw new TypeError("An expired device session cannot be stored.");
+      }
+      try {
+        sessionEntry.setPassword(JSON.stringify(validated));
+      } catch {
+        throw new Error("The operating system credential store rejected the device session.");
+      }
+    },
+    async loadSessionToken() {
+      let value;
+      try {
+        value = sessionEntry.getPassword();
+      } catch {
+        throw new Error("The operating system credential store could not read the device session.");
+      }
+      if (value === null || value === undefined) return null;
+      let parsed;
+      try { parsed = JSON.parse(value); }
+      catch {
+        throw new Error("The operating system credential store returned an invalid device session.");
+      }
+      const validated = validateSessionRecord(parsed);
+      if (validated.expiresAt <= Date.now()) {
+        try { sessionEntry.deletePassword(); } catch {
+          throw new Error("The expired device session could not be removed from the credential store.");
+        }
+        return null;
+      }
+      return validated;
+    },
+    async deleteSessionToken() {
+      try {
+        sessionEntry.deletePassword();
+      } catch {
+        throw new Error("The operating system credential store could not delete the device session.");
       }
     },
   });
