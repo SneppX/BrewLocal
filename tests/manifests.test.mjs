@@ -19,17 +19,24 @@ test("published plugin manifests stay aligned with the runtime package version",
   assert.equal(codex.author.name, "SneppX");
 });
 
-test("plugin manifests point to real local skill and MCP configuration files", async () => {
+test("portable and Codex manifests resolve their actual skill and MCP files", async () => {
   const plugin = await readJson("plugin.json");
   const codex = await readJson(".codex-plugin/plugin.json");
-  const mcp = await readJson(".mcp.json");
+  const portableMcp = await readJson("mcp.json");
+  const codexMcp = await readJson(".mcp.json");
+  const openaiInterface = plugin.extensions?.["com.openai"]?.interface;
 
-  assert.equal(plugin.skills, "./skills");
+  assert.ok(openaiInterface, "portable manifest must expose its OpenAI interface metadata");
+  assert.equal(openaiInterface.displayName, "BrewPilot");
+  assert.ok(openaiInterface.shortDescription.length <= 30);
+  assert.equal("skills" in plugin, false, "portable skills are discovered from the root skills directory");
+  assert.equal("mcpServers" in plugin, false, "portable MCP servers are declared in root mcp.json");
   assert.equal(codex.skills, "./skills");
-  assert.equal(plugin.mcpServers, "./.mcp.json");
   assert.equal(codex.mcpServers, "./.mcp.json");
   await access(new URL("../skills/browser-automation/SKILL.md", import.meta.url));
-  assert.deepEqual(Object.keys(mcp.mcpServers), ["brewpilot-local"]);
-  assert.equal(mcp.mcpServers["brewpilot-local"].type, "stdio");
-  assert.equal(mcp.mcpServers["brewpilot-local"].command, "node");
+  for (const mcp of [portableMcp, codexMcp]) {
+    assert.deepEqual(Object.keys(mcp.mcpServers), ["brewpilot-local"]);
+    assert.equal(mcp.mcpServers["brewpilot-local"].type, "stdio");
+    assert.equal(mcp.mcpServers["brewpilot-local"].command, "node");
+  }
 });
