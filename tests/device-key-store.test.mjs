@@ -93,3 +93,21 @@ test("isolates credentials for the same device ID across different accounts", as
   assert.equal(await second.loadPrivateKey(), null);
   assert.equal(records.size, 1);
 });
+
+test("stores cloud device sessions separately from private keys in the OS credential store", async () => {
+  const { FakeEntry, records } = makeEntryHarness();
+  const store = await createDeviceKeyStore({ accountId: "account-01", deviceId: "device-session-01", platform: "win32", EntryClass: FakeEntry });
+  const session = { token: "S".repeat(43), expiresAt: Date.now() + 60_000 };
+  await store.storeSessionToken(session);
+  assert.deepEqual(await store.loadSessionToken(), session);
+  assert.equal(records.size, 1);
+  await store.deleteSessionToken();
+  assert.equal(await store.loadSessionToken(), null);
+});
+
+test("refuses malformed and expired cloud session tokens", async () => {
+  const { FakeEntry } = makeEntryHarness();
+  const store = await createDeviceKeyStore({ accountId: "account-01", deviceId: "device-session-02", platform: "win32", EntryClass: FakeEntry });
+  await assert.rejects(store.storeSessionToken({ token: "not-a-token", expiresAt: Date.now() + 60_000 }), /valid device session token/);
+  await assert.rejects(store.storeSessionToken({ token: "S".repeat(43), expiresAt: Date.now() - 1 }), /expired device session/);
+});
