@@ -52,6 +52,18 @@ test("MCP server exposes permission tools and gates system information", async (
     const names = listed.tools.map((tool) => tool.name);
     assert.ok(names.includes("permissions_approve_once"));
     assert.ok(names.includes("system_info"));
+    for (const tool of listed.tools) {
+      assert.equal(typeof tool.annotations?.readOnlyHint, "boolean", `${tool.name} must declare readOnlyHint`);
+      assert.equal(typeof tool.annotations?.openWorldHint, "boolean", `${tool.name} must declare openWorldHint`);
+      assert.equal(typeof tool.annotations?.destructiveHint, "boolean", `${tool.name} must declare destructiveHint`);
+    }
+    const byName = Object.fromEntries(listed.tools.map((tool) => [tool.name, tool]));
+    for (const name of ["permissions_reset", "files_write", "files_delete", "browser_click", "browser_type", "browser_fill"]) {
+      assert.equal(byName[name].annotations.destructiveHint, true, `${name} must be marked destructive`);
+    }
+    assert.equal(byName.permissions_list.annotations.readOnlyHint, true);
+    assert.equal(byName.system_info.annotations.readOnlyHint, true);
+    assert.equal(byName.browser_navigate.annotations.openWorldHint, true);
     const denied = await server.call("tools/call", { name: "system_info", arguments: {} });
     const deniedPayload = JSON.parse(denied.content[0].text);
     assert.equal(deniedPayload.status, "approval_required");
