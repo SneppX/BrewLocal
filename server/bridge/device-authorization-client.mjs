@@ -152,7 +152,7 @@ export function createBrewPilotDeviceAuthorizationClient({
   };
 
   const waitForApproval = async ({ onPending, signal } = {}) => {
-      if (!activeDeviceCode) await begin();
+      if (!activeDeviceCode) throw new Error("Begin device authorization and display its user code before waiting for approval.");
       while (activeDeviceCode && Date.now() < activeExpiresAt) {
         const result = await poll();
         if (result.status === "authorized" || result.status === "expired" || result.status === "already_used") {
