@@ -87,6 +87,7 @@ export class PermissionManager {
     this.#policies.push(normalized);
     this.#sessionGrants.clear();
     this.#oneTimeGrants.clear();
+    this.#pendingApprovals.clear();
     return normalized;
   }
 
