@@ -15,7 +15,7 @@
   },
   "name": "brewpilot",
   "version": "0.3.2",
-  "description": "Local browser automation and permission-gated, scoped file operations.",
+  "description": "Local browser automation, scoped file operations, and explicit permission controls.",
   "author": {
     "name": "SneppX"
   },
