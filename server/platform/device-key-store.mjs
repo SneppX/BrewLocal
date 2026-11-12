@@ -2,7 +2,7 @@ import { createHash, createPrivateKey } from "node:crypto";
 import { getPlatformAdapter } from "./registry.mjs";
 
 const SERVICE_NAME = "com.sneppx.brewpilot.device-identity";
-const DEVICE_ID_PATTERN = /^[A-Za-z0-9._:-]{1,200}$/;
+const DEVICE_ID_PATTERN = /^[A-Za-z0-9._:-]{1,200}$/;\nconst SESSION_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
 function validateDeviceId(deviceId) {
   if (typeof deviceId !== "string" || !DEVICE_ID_PATTERN.test(deviceId)) {
@@ -27,7 +27,7 @@ function accountNameForDevice(accountId, deviceId) {
   return "device:" + createHash("sha256").update(scopedIdentity, "utf8").digest("hex");
 }
 
-function keyringOptions(platform) {
+function sessionAccountNameForDevice(accountId, deviceId) {\n  const scopedIdentity = accountId + String.fromCharCode(0) + deviceId + String.fromCharCode(0) + "session";\n  return "session:" + createHash("sha256").update(scopedIdentity, "utf8").digest("hex");\n}\n\nfunction validateSessionRecord(record) {\n  if (!record || typeof record !== "object" || !SESSION_TOKEN_PATTERN.test(record.token ?? "") ||\n      !Number.isSafeInteger(record.expiresAt) || record.expiresAt <= 0) {\n    throw new TypeError("A valid device session token and expiry are required.");\n  }\n  return { token: record.token, expiresAt: record.expiresAt };\n}\n\nfunction keyringOptions(platform) {
   if (platform === "linux") {
     // Require Secret Service. Automatic selection may fall back to a volatile keyutils keyring.
     return { linux: { store: "secret-service" } };
