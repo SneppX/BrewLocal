@@ -48,7 +48,7 @@ jobs:
           cp server/index.mjs "$STAGE/server/index.mjs"
           cp server/core/*.mjs "$STAGE/server/core/"
           cp tests/audit.test.mjs tests/browser-policy.test.mjs tests/filesystem.test.mjs tests/filesystem-write.test.mjs tests/manifests.test.mjs tests/mcp-smoke.test.mjs tests/permissions.test.mjs tests/policy-store.test.mjs "$STAGE/tests/"
-          node -e 'const fs=require("node:fs");const p=JSON.parse(fs.readFileSync("package.json","utf8"));p.private=true;p.description="BrewPilot local stdio MCP runtime";p.dependencies={};p.scripts={test:"node --test"};fs.writeFileSync(process.argv[1],JSON.stringify(p,null,2)+"\\n")' "$STAGE/package.json"
+          node -e 'const fs=require("node:fs");const p=JSON.parse(fs.readFileSync("package.json","utf8"));p.private=true;p.description="BrewPilot local stdio MCP runtime";p.dependencies={};p.scripts={test:"node --test"};fs.writeFileSync(process.argv[1],JSON.stringify(p,null,2)+"\n")' "$STAGE/package.json"
           cd "$STAGE"
           npm test
           zip -qr "$ROOT/dist/brewpilot-local-plugin-0.3.4.zip" .
