@@ -71,7 +71,7 @@ test("polls pending authorization and stores an approved session in the OS key s
     },
   });
   await client.begin();
-  await assert.rejects(client.loadSession(), /never/).catch(() => {});
+  assert.equal(await client.loadSession(), null);
   assert.deepEqual(await client.poll(), { status: "authorization_pending", intervalSeconds: 5 });
   const authorized = await client.poll();
   assert.equal(authorized.status, "authorized");
@@ -107,7 +107,7 @@ test("waits at the server-provided interval until approval and persists the sess
   assert.equal(keyStore.getSession().token, "U".repeat(43));
 });
 
-test("clears an expired authorization and never stores an invalid session response", async () => {
+test("never stores an invalid session response", async () => {
   const keyStore = makeKeyStore();
   const client = createBrewPilotDeviceAuthorizationClient({
     cloudBaseUrl: "https://cloud.example.test",
