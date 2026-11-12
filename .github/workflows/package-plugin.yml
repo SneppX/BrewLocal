@@ -39,7 +39,7 @@ jobs:
           set -euo pipefail
           ROOT="$GITHUB_WORKSPACE"
           STAGE="$ROOT/dist/plugin"
-          mkdir -p "$STAGE/server/core" "$STAGE/tests" "$STAGE/skills/browser-automation" "$STAGE/.codex-plugin" "$STAGE/assets"
+          mkdir -p "$STAGE/server/core" "$STAGE/server/platform" "$STAGE/tests" "$STAGE/skills/browser-automation" "$STAGE/.codex-plugin" "$STAGE/assets"
           cp mcp.json .mcp.json plugin.json "$STAGE/"
           cp .codex-plugin/plugin.json "$STAGE/.codex-plugin/plugin.json"
           cp skills/browser-automation/SKILL.md "$STAGE/skills/browser-automation/SKILL.md"
@@ -47,6 +47,7 @@ jobs:
           cp assets/brewpilot-icon.svg "$STAGE/assets/brewpilot-icon.svg"
           cp server/index.mjs "$STAGE/server/index.mjs"
           cp server/core/*.mjs "$STAGE/server/core/"
+          cp server/platform/registry.mjs "$STAGE/server/platform/registry.mjs"
           cp tests/audit.test.mjs tests/browser-policy.test.mjs tests/filesystem.test.mjs tests/filesystem-write.test.mjs tests/manifests.test.mjs tests/mcp-smoke.test.mjs tests/permissions.test.mjs tests/policy-store.test.mjs "$STAGE/tests/"
           node -e 'const fs=require("node:fs");const p=JSON.parse(fs.readFileSync("package.json","utf8"));p.private=true;p.description="BrewPilot local stdio MCP runtime";p.dependencies={};p.scripts={test:"node --test"};fs.writeFileSync(process.argv[1],JSON.stringify(p,null,2)+"\n")' "$STAGE/package.json"
           cd "$STAGE"
