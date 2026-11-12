@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - "server/platform/device-key-store.mjs"
-      - "tests/native-keyring-smoke.mjs"
+      - "tests/**"
       - "package.json"
       - ".github/workflows/native-keyring.yml"
   pull_request:
