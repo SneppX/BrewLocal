@@ -100,7 +100,7 @@ test("waits at the server-provided interval until approval and persists the sess
     fetchImpl: async () => responses.shift(),
     sleepImpl: async (ms) => { delays.push(ms); },
   });
-  const result = await client.waitForApproval({ onPending: (value) => pending.push(value) });
+  const started = await client.begin();\n  assert.equal(started.userCode, "ABCD-EFGH");\n  const result = await client.waitForApproval({ onPending: (value) => pending.push(value) });
   assert.equal(result.status, "authorized");
   assert.deepEqual(delays, [2000]);
   assert.equal(pending.length, 1);
