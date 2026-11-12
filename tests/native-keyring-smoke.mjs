@@ -15,7 +15,7 @@ try {
   const restored = await keyStore.loadPrivateKey();
   assert.equal(restored, identity.privateKeyPem, "native credential store must return the exact private key");
   await keyStore.deletePrivateKey();
-  assert.equal(await keyStore.loadPrivateKey(), null, "deleted credentials must not remain readable");
+  assert.equal(await keyStore.loadPrivateKey(), null, "deleted credentials must not remain readable");\n  const session = { token: "S".repeat(43), expiresAt: Date.now() + 60_000 };\n  await keyStore.storeSessionToken(session);\n  assert.deepEqual(await keyStore.loadSessionToken(), session, "native credential store must persist device sessions");\n  await keyStore.deleteSessionToken();\n  assert.equal(await keyStore.loadSessionToken(), null, "deleted sessions must not remain readable");
   process.stdout.write("Native OS credential-store round-trip passed.\n");
 } finally {
   await keyStore.deletePrivateKey().catch(() => {});
